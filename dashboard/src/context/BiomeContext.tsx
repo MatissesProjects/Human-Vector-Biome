@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, createContext, useContext } from 'react';
 import { io, Socket } from 'socket.io-client';
@@ -18,12 +18,16 @@ export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const socket = io('http://localhost:3000');
 
-    socket.on('dashboard_update', (payload) => {
+    const updateState = (payload: any) => {
       setState((prev) => ({
         ...prev,
         [payload.project]: payload.data,
       }));
-    });
+    };
+
+    // Listen for both event types
+    socket.on('dashboard_update', updateState);
+    socket.on('telemetry', updateState);
 
     socket.on('project_event', (payload) => {
         if (payload.project === 'pills') {
