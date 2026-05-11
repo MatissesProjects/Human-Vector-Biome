@@ -3,7 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { BiomeState, ProjectType } from './types';
+import type { BiomeState, ProjectType } from './types.js';
 
 dotenv.config();
 
