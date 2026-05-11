@@ -32,10 +32,20 @@ socket.on('connect', () => {
       project: 'posture',
       data: {
         timestamp: new Date().toISOString(),
-        posture_score: score,
-        skeletal_coords: { neck: { x: 0, y: 1.2, z: -0.5 } },
-        fatigue_index: 0.3,
-        alerts: score > 7 ? ['SLOUCH_DETECTED'] : []
+        analysis: {
+          score: score,
+          status: score > 7 ? 'SLOUCHING' : 'GOOD',
+          feedback: score > 7 ? 'Sit up straight!' : 'Perfect posture.'
+        },
+        pose: {
+          nose: { x: 0, y: 1.2, z: -0.5 },
+          left_shoulder: { x: -0.5, y: 1.0, z: -0.4 },
+          right_shoulder: { x: 0.5, y: 1.0, z: -0.4 },
+          left_elbow: { x: -0.7, y: 0.5, z: -0.3 },
+          right_elbow: { x: 0.7, y: 0.5, z: -0.3 },
+          left_hip: { x: -0.3, y: 0.0, z: -0.2 },
+          right_hip: { x: 0.3, y: 0.0, z: -0.2 }
+        }
       }
     });
   }, 3000);

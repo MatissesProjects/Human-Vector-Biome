@@ -6,10 +6,16 @@ export interface Vector3 {
 
 export interface PostureTelemetry {
   timestamp: string;
-  posture_score: number; // RULA/REBA score
-  skeletal_coords: Record<string, Vector3>;
-  fatigue_index: number;
-  alerts: string[];
+  analysis: {
+    score: number;
+    status?: string;
+    feedback?: string;
+    nudge?: string;
+    fatigue_index?: number;
+    static_duration?: number;
+  };
+  pose: Record<string, Vector3>;
+  workspace?: any;
 }
 
 export interface HeartBiometrics {

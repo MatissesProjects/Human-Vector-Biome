@@ -3,6 +3,7 @@
 import { useBiome } from "@/context/BiomeContext";
 import { Activity, Brain, User, BookOpen, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import SkeletonView from "@/components/SkeletonView";
 
 export default function Home() {
   const state = useBiome();
@@ -47,15 +48,18 @@ export default function Home() {
           <User className="text-blue-500" />
           <h2 className="text-xl font-semibold">Posture Sense</h2>
         </div>
-        <div className="flex flex-col items-center justify-center h-48 border border-dashed border-zinc-700 rounded-xl bg-black/40">
-           <p className="text-zinc-500 text-sm">3D Skeleton Viewport</p>
-           {state.posture ? (
-              <div className="mt-4 text-center">
-                <p className="text-2xl font-bold">{state.posture.posture_score}</p>
-                <p className="text-xs text-gray-400">Posture Score</p>
-              </div>
-           ) : <p className="text-xs mt-2 italic text-zinc-600">Waiting for telemetry...</p>}
+        <div className="h-64 mb-4">
+           <SkeletonView data={state.posture} />
         </div>
+        {state.posture ? (
+            <div className="text-center">
+              <p className={`text-3xl font-bold ${state.posture.analysis.score > 80 ? 'text-green-400' : 'text-orange-400'}`}>
+                {state.posture.analysis.score}%
+              </p>
+              <p className="text-xs text-gray-400 uppercase tracking-widest mt-1">Posture Score</p>
+              <p className="text-sm text-zinc-300 mt-2 italic">{state.posture.analysis.feedback}</p>
+            </div>
+        ) : <p className="text-xs text-center italic text-zinc-600">Waiting for telemetry...</p>}
       </section>
 
       {/* Heart Sense */}
