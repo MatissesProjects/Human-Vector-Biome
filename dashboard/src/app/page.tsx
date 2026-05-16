@@ -1,9 +1,10 @@
 "use client";
 
 import { useBiome } from "@/context/BiomeContext";
-import { Activity, Brain, User, BookOpen, AlertCircle } from "lucide-react";
+import { Activity, Brain, User, BookOpen, AlertCircle, Tag } from "lucide-react";
 import { motion } from "framer-motion";
 import SkeletonView from "@/components/SkeletonView";
+import ActionCapture from "@/components/ActionCapture";
 
 export default function Home() {
   const state = useBiome();
@@ -80,8 +81,11 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Action Capture */}
+      <ActionCapture />
+
       {/* Story Generator */}
-      <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl lg:col-span-2">
+      <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl">
         <div className="flex items-center gap-3 mb-4">
           <BookOpen className="text-emerald-500" />
           <h2 className="text-xl font-semibold">Story Generator</h2>
@@ -98,12 +102,20 @@ export default function Home() {
       </section>
 
       {/* Alerts & Events */}
-      <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl">
+      <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl max-h-[400px] overflow-hidden flex flex-col">
         <div className="flex items-center gap-3 mb-4">
           <AlertCircle className="text-orange-500" />
           <h2 className="text-xl font-semibold">Timeline</h2>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-y-auto pr-2 flex-1">
+          {state.actions.map((action, i) => (
+            <div key={action.id || i} className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg text-sm flex justify-between items-center">
+              <div>
+                <span className="font-bold text-yellow-400">[{action.type}]</span> {action.label}
+              </div>
+              <span className="text-[10px] text-zinc-500">{new Date(action.timestamp).toLocaleTimeString()}</span>
+            </div>
+          ))}
           {state.lastPillEvent && (
             <div className="bg-orange-500/10 border border-orange-500/20 p-3 rounded-lg text-sm">
               <span className="font-bold text-orange-400">[{state.lastPillEvent.type}]</span> {state.lastPillEvent.pill_name}: {state.lastPillEvent.details}

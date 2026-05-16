@@ -3,7 +3,9 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import type { BiomeState, ProjectType } from './types.js';
+import fs from 'fs';
+import path from 'path';
+import type { BiomeState, ProjectType, UserAction } from './types.js';
 
 dotenv.config();
 
@@ -20,6 +22,11 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+const LOG_DIR = path.join(process.cwd(), 'logs');
+
+if (!fs.existsSync(LOG_DIR)) {
+  fs.mkdirSync(LOG_DIR);
+}
 
 // Centralized state
 const state: BiomeState = {
@@ -27,8 +34,41 @@ const state: BiomeState = {
   heart: null,
   muse: null,
   story: null,
-  lastPillEvent: null
+  lastPillEvent: null,
+  actions: []
 };
+
+let activeCapture: { id: string, label: string } | null = null;
+
+/**
+ * Persistence Layer for Training Data
+ */
+function persistAction(action: UserAction) {
+  const filePath = path.join(LOG_DIR, 'actions.jsonl');
+  const entry = {
+    ...action,
+    // Capture a snapshot of the biometric state for training correlation
+    stateSnapshot: {
+        posture: state.posture,
+        heart: state.heart,
+        muse: state.muse
+    }
+  };
+  fs.appendFileSync(filePath, JSON.stringify(entry) + '\n');
+  console.log(`[Persistence] Logged action: ${action.label} (${action.type})`);
+}
+
+function persistTelemetrySample(actionId: string, label: string, project: string, data: any) {
+  const filePath = path.join(LOG_DIR, 'capture_samples.jsonl');
+  const entry = {
+    actionId,
+    label,
+    project,
+    timestamp: new Date().toISOString(),
+    data
+  };
+  fs.appendFileSync(filePath, JSON.stringify(entry) + '\n');
+}
 
 /**
  * Intervention Brain
@@ -46,7 +86,7 @@ function runInterventions() {
   }
 
   // 2. Posture -> Haptic Alert
-  if (state.posture && state.posture.posture_score > 7) { // High score = bad posture in some metrics
+  if (state.posture && state.posture.analysis.score < 40) { // Using a score threshold (adjusted for logic)
      console.log('[Intervention] Bad Posture detected. Sending Haptic Alert to Watch.');
      io.emit('intervention', {
        target: 'heart',
@@ -76,6 +116,38 @@ app.post('/api/events/:project', (req, res) => {
   res.status(200).json({ status: 'success', received: true });
 });
 
+/**
+ * Specialized Action Capture Endpoint
+ * Used for tagging actions for ML training
+ */
+app.post('/api/actions', (req, res) => {
+  const { label, type } = req.body;
+  const id = Math.random().toString(36).substr(2, 9);
+  
+  const action: UserAction = {
+    id,
+    timestamp: new Date().toISOString(),
+    label,
+    type
+  };
+
+  if (type === 'START') {
+    activeCapture = { id, label };
+    console.log(`[Capture] Started recording: ${label}`);
+  } else if (type === 'STOP') {
+    activeCapture = null;
+    console.log(`[Capture] Stopped recording: ${label}`);
+  }
+
+  state.actions.push(action);
+  if (state.actions.length > 50) state.actions.shift(); // Keep recent buffer
+
+  persistAction(action);
+  io.emit('project_event', { project: 'actions', data: action });
+
+  res.status(200).json({ status: 'success', action });
+});
+
 // WebSocket connection for high-frequency data
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -88,6 +160,11 @@ io.on('connection', (socket) => {
     if (project === 'heart') state.heart = data;
     if (project === 'muse') state.muse = data;
     if (project === 'story') state.story = data;
+
+    // Capture telemetry if a session is active
+    if (activeCapture && (project === 'posture' || project === 'heart' || project === 'muse')) {
+        persistTelemetrySample(activeCapture.id, activeCapture.label, project, data);
+    }
 
     // Broadcast to dashboard
     socket.broadcast.emit('dashboard_update', payload);

@@ -58,12 +58,22 @@ export interface PillEvent {
   details: string;
 }
 
+export interface UserAction {
+  id: string;
+  timestamp: string;
+  label: string;
+  type: 'START' | 'STOP' | 'POINT';
+  metadata?: Record<string, any>;
+  stateSnapshot?: Partial<BiomeState>;
+}
+
 export interface BiomeState {
   posture: PostureTelemetry | null;
   heart: HeartBiometrics | null;
   muse: MuseBrainwaves | null;
   story: NarrativeState | null;
   lastPillEvent: PillEvent | null;
+  actions: UserAction[];
 }
 
-export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo';
+export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions';

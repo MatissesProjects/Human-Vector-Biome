@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, createContext, useContext } from 'react';
 import { io, Socket } from 'socket.io-client';
@@ -13,6 +13,7 @@ export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
     muse: null,
     story: null,
     lastPillEvent: null,
+    actions: []
   });
 
   useEffect(() => {
@@ -35,6 +36,12 @@ export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
         }
         if (payload.project === 'story') {
             setState(prev => ({ ...prev, story: payload }));
+        }
+        if (payload.project === 'actions') {
+            setState(prev => ({
+                ...prev,
+                actions: [payload.data, ...prev.actions].slice(0, 10)
+            }));
         }
     });
 
