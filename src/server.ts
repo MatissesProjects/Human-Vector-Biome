@@ -38,7 +38,7 @@ const state: BiomeState = {
   actions: []
 };
 
-let activeCapture: { id: string, label: string } | null = null;
+let activeCapture: { id: string, label: string, streams: string[] } | null = null;
 
 /**
  * Persistence Layer for Training Data
@@ -121,19 +121,20 @@ app.post('/api/events/:project', (req, res) => {
  * Used for tagging actions for ML training
  */
 app.post('/api/actions', (req, res) => {
-  const { label, type } = req.body;
+  const { label, type, streams = ['posture'] } = req.body;
   const id = Math.random().toString(36).substr(2, 9);
   
   const action: UserAction = {
     id,
     timestamp: new Date().toISOString(),
     label,
-    type
+    type,
+    metadata: { streams }
   };
 
   if (type === 'START') {
-    activeCapture = { id, label };
-    console.log(`[Capture] Started recording: ${label}`);
+    activeCapture = { id, label, streams };
+    console.log(`[Capture] Started recording: ${label} on streams: ${streams.join(', ')}`);
   } else if (type === 'STOP') {
     activeCapture = null;
     console.log(`[Capture] Stopped recording: ${label}`);
@@ -161,8 +162,8 @@ io.on('connection', (socket) => {
     if (project === 'muse') state.muse = data;
     if (project === 'story') state.story = data;
 
-    // Capture telemetry if a session is active
-    if (activeCapture && (project === 'posture' || project === 'heart' || project === 'muse')) {
+    // Capture telemetry if a session is active and stream is selected
+    if (activeCapture && activeCapture.streams.includes(project as string)) {
         persistTelemetrySample(activeCapture.id, activeCapture.label, project, data);
     }
 
