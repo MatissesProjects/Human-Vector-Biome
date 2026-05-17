@@ -1,11 +1,12 @@
 import express from 'express';
+import type { Request, Response } from 'express';
 import http from 'http';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import type { BiomeState, ProjectType, UserAction } from './types.js';
+import type { BiomeState, ProjectType, UserAction, TelemetryPayload } from './types.js';
 import { ActionRecognizer } from './recognizer.js';
 
 dotenv.config();
@@ -62,7 +63,7 @@ function persistAction(action: UserAction) {
   console.log(`[Persistence] Logged action: ${action.label} (${action.type})`);
 }
 
-function persistTelemetrySample(actionId: string, label: string, project: string, data: any) {
+function persistTelemetrySample(actionId: string, label: string, project: string, data: unknown) {
   const filePath = path.join(LOG_DIR, 'capture_samples.jsonl');
   const entry = {
     actionId,
@@ -101,7 +102,7 @@ function runInterventions() {
 }
 
 // REST Endpoints for low-frequency data
-app.post('/api/events/:project', (req, res) => {
+app.post('/api/events/:project', (req: Request, res: Response) => {
   const { project } = req.params as { project: ProjectType };
   const eventData = req.body;
   
@@ -124,7 +125,7 @@ app.post('/api/events/:project', (req, res) => {
  * Specialized Action Capture Endpoint
  * Used for tagging actions for ML training
  */
-app.post('/api/actions', (req, res) => {
+app.post('/api/actions', (req: Request, res: Response) => {
   const { label, type, streams = ['posture'] } = req.body;
   const id = Math.random().toString(36).substr(2, 9);
   
@@ -156,15 +157,16 @@ app.post('/api/actions', (req, res) => {
 });
 
 // WebSocket connection for high-frequency data
-io.on('connection', (socket) => {
+io.on('connection', (socket: Socket) => {
   console.log('Client connected:', socket.id);
 
-  socket.on('telemetry', (payload: { project: ProjectType, data: any }) => {
+  socket.on('telemetry', (payload: TelemetryPayload) => {
     const { project, data } = payload;
     
     // Update local state
     if (project === 'posture') {
         state.posture = data;
+
         
         // Feed frame to recognizer
         const detectedAction = recognizer.processFrame(data);

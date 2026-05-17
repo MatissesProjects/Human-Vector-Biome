@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { PostureTelemetry, Vector3 } from './types.js';
+import type { PostureTelemetry, Vector3 } from './types.js';
 
 export function euclideanDist3D(p1: Vector3, p2: Vector3): number {
     return Math.sqrt(
@@ -32,22 +32,24 @@ function computeDTW(seq1: number[][], seq2: number[][]): number {
     const m = seq2.length;
     
     const dtw = Array(n + 1).fill(null).map(() => Array(m + 1).fill(Infinity));
-    dtw[0][0] = 0;
+    dtw[0]![0] = 0;
 
     for (let i = 1; i <= n; i++) {
         for (let j = 1; j <= m; j++) {
             const v1 = seq1[i - 1];
             const v2 = seq2[j - 1];
-            const cost = Math.sqrt(v1.reduce((sum, val, k) => sum + Math.pow(val - v2[k], 2), 0));
-            dtw[i][j] = cost + Math.min(
-                dtw[i - 1][j],    // insertion
-                dtw[i][j - 1],    // deletion
-                dtw[i - 1][j - 1] // match
+            if (!v1 || !v2) continue;
+            
+            const cost = Math.sqrt(v1.reduce((sum, val, k) => sum + Math.pow(val - v2[k]!, 2), 0));
+            dtw[i]![j] = cost + Math.min(
+                dtw[i - 1]![j]!,    // insertion
+                dtw[i]![j - 1]!,    // deletion
+                dtw[i - 1]![j - 1]! // match
             );
         }
     }
     // Normalize by length path
-    return dtw[n][m] / Math.max(n, m);
+    return dtw[n]![m]! / Math.max(n, m);
 }
 
 interface Template {
@@ -81,7 +83,7 @@ export class ActionRecognizer {
                     if (!grouped[entry.actionId]) {
                         grouped[entry.actionId] = { label: entry.label, frames: [] };
                     }
-                    grouped[entry.actionId].frames.push(extractFeatures(entry.data.pose));
+                    grouped[entry.actionId]!.frames.push(extractFeatures(entry.data.pose));
                 }
             } catch (e) {}
         }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, createContext, useContext } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { BiomeState } from '../../src/types';
+import { BiomeState, TelemetryPayload } from '../../../src/types';
 import { toast } from 'sonner';
 
 const BiomeContext = createContext<BiomeState | null>(null);
@@ -20,7 +20,7 @@ export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const socket = io('http://localhost:3000');
 
-    const updateState = (payload: any) => {
+    const updateState = (payload: TelemetryPayload) => {
       setState((prev) => ({
         ...prev,
         [payload.project]: payload.data,

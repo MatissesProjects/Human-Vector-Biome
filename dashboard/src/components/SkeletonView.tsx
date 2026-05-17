@@ -4,7 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Point, Points } from "@react-three/drei";
 import { useMemo } from "react";
 import * as THREE from "three";
-import { PostureTelemetry } from "../../../src/types";
+import { PostureTelemetry, Vector3 } from "../../../src/types";
 
 export default function SkeletonView({ data }: { data: PostureTelemetry | null }) {
   const points = useMemo(() => {
@@ -22,7 +22,7 @@ export default function SkeletonView({ data }: { data: PostureTelemetry | null }
           Waiting for skeleton telemetry...
         </div>
       )}
-      <Canvas camera={{ position: [0, 0, 3], fdist: 50 }}>
+      <Canvas camera={{ position: [0, 0, 3] }}>
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} />
         
@@ -47,7 +47,7 @@ export default function SkeletonView({ data }: { data: PostureTelemetry | null }
   );
 }
 
-function Line({ start, end, color }: { start: any, end: any, color: string }) {
+function Line({ start, end, color }: { start: Vector3, end: Vector3, color: string }) {
     const points = useMemo(() => [
         new THREE.Vector3(start.x, -start.y, start.z),
         new THREE.Vector3(end.x, -end.y, end.z)
@@ -59,8 +59,7 @@ function Line({ start, end, color }: { start: any, end: any, color: string }) {
                 <bufferAttribute
                     attach="attributes-position"
                     count={2}
-                    array={new Float32Array(points.flatMap(p => [p.x, p.y, p.z]))}
-                    itemSize={3}
+                    args={[new Float32Array(points.flatMap(p => [p.x, p.y, p.z])), 3]}
                 />
             </bufferGeometry>
             <lineBasicMaterial attach="material" color={color} linewidth={2} />

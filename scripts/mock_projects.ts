@@ -51,7 +51,7 @@ socket.on('connect', () => {
   }, 3000);
 });
 
-socket.on('intervention', (data) => {
+socket.on('intervention', (data: { target: string, type: string, message: string }) => {
   console.log('!!! [INTERVENTION RECEIVED] !!!');
   console.log(`Target: ${data.target}`);
   console.log(`Type: ${data.type}`);

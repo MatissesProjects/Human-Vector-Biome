@@ -15,7 +15,7 @@ export interface PostureTelemetry {
     static_duration?: number;
   };
   pose: Record<string, Vector3>;
-  workspace?: any;
+  workspace?: Record<string, unknown>;
 }
 
 export interface HeartBiometrics {
@@ -63,7 +63,7 @@ export interface UserAction {
   timestamp: string;
   label: string;
   type: 'START' | 'STOP' | 'POINT';
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   stateSnapshot?: Partial<BiomeState>;
 }
 
@@ -77,3 +77,12 @@ export interface BiomeState {
 }
 
 export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions';
+
+export type TelemetryPayload = 
+  | { project: 'posture'; data: PostureTelemetry }
+  | { project: 'heart'; data: HeartBiometrics }
+  | { project: 'muse'; data: MuseBrainwaves }
+  | { project: 'story'; data: NarrativeState }
+  | { project: 'pills'; data: PillEvent }
+  | { project: 'actions'; data: UserAction }
+  | { project: 'echo'; data: unknown };
