@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import type { BiomeState, ProjectType, UserAction } from './types.js';
+import { ActionRecognizer } from './recognizer.js';
 
 dotenv.config();
 
@@ -27,6 +28,9 @@ const LOG_DIR = path.join(process.cwd(), 'logs');
 if (!fs.existsSync(LOG_DIR)) {
   fs.mkdirSync(LOG_DIR);
 }
+
+// Initialize DTW Recognizer
+const recognizer = new ActionRecognizer();
 
 // Centralized state
 const state: BiomeState = {
@@ -138,6 +142,8 @@ app.post('/api/actions', (req, res) => {
   } else if (type === 'STOP') {
     activeCapture = null;
     console.log(`[Capture] Stopped recording: ${label}`);
+    // Reload templates so the newly recorded action is immediately available for detection
+    recognizer.loadTemplates();
   }
 
   state.actions.push(action);
@@ -157,7 +163,24 @@ io.on('connection', (socket) => {
     const { project, data } = payload;
     
     // Update local state
-    if (project === 'posture') state.posture = data;
+    if (project === 'posture') {
+        state.posture = data;
+        
+        // Feed frame to recognizer
+        const detectedAction = recognizer.processFrame(data);
+        if (detectedAction) {
+             const actionEvent: UserAction = {
+                id: Math.random().toString(36).substr(2, 9),
+                timestamp: new Date().toISOString(),
+                label: detectedAction,
+                type: 'POINT',
+                metadata: { source: 'DTW_RECOGNIZER' }
+             };
+             state.actions.push(actionEvent);
+             if (state.actions.length > 50) state.actions.shift();
+             io.emit('project_event', { project: 'actions', data: actionEvent });
+        }
+    }
     if (project === 'heart') state.heart = data;
     if (project === 'muse') state.muse = data;
     if (project === 'story') state.story = data;
