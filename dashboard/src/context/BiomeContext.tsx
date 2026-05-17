@@ -3,6 +3,7 @@
 import { useEffect, useState, createContext, useContext } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { BiomeState } from '../../src/types';
+import { toast } from 'sonner';
 
 const BiomeContext = createContext<BiomeState | null>(null);
 
@@ -43,6 +44,15 @@ export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
                 actions: [payload.data, ...prev.actions].slice(0, 10)
             }));
         }
+    });
+
+    socket.on('intervention', (payload) => {
+        // payload: { target, type, message }
+        const formattedType = payload.type.replace(/_/g, ' ');
+        toast.warning(`Intervention: ${formattedType}`, {
+            description: payload.message,
+            duration: 8000,
+        });
     });
 
     return () => {
