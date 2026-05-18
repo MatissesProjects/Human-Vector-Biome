@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import SkeletonView from "@/components/SkeletonView";
 import ActionCapture from "@/components/ActionCapture";
 import Sparkline from "@/components/Sparkline";
+import PulseOrb from "@/components/PulseOrb";
+import NextBestAction from "@/components/NextBestAction";
 
 export default function Home() {
   const state = useBiome();
@@ -14,12 +16,14 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <header className="col-span-full mb-8">
+      <header className="col-span-full mb-4">
         <h1 className="text-4xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
           OMNI-HEALTH DASHBOARD
         </h1>
         <p className="text-gray-400">Human-Vector-Biome Central Command</p>
       </header>
+
+      <NextBestAction stressIndex={state.muse?.stress_index} />
 
       {/* Muse Brainwaves */}
       <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex flex-col">
@@ -73,14 +77,13 @@ export default function Home() {
           <Activity className="text-red-500" />
           <h2 className="text-xl font-semibold">Heart Sense</h2>
         </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="bg-zinc-800/30 p-4 rounded-xl">
-            <p className="text-xs text-gray-500 uppercase font-bold">Heart Rate</p>
-            <p className="text-3xl font-mono">{state.heart?.heart_rate || "--"} <span className="text-sm">BPM</span></p>
+        <div className="grid grid-cols-2 gap-4 mb-4 flex-1">
+          <div className="bg-zinc-800/30 p-4 rounded-xl flex items-center justify-center">
+            <PulseOrb heartRate={state.heart?.heart_rate} />
           </div>
-          <div className="bg-zinc-800/30 p-4 rounded-xl">
-            <p className="text-xs text-gray-500 uppercase font-bold">HRV</p>
-            <p className="text-3xl font-mono">{state.heart?.hrv || "--"}</p>
+          <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
+            <p className="text-xs text-gray-500 uppercase font-bold mb-2">HRV</p>
+            <p className="text-4xl font-mono">{state.heart?.hrv || "--"}</p>
           </div>
         </div>
         <div className="h-24 w-full bg-zinc-800/30 rounded-xl mt-auto">
