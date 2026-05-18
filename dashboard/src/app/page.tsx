@@ -5,6 +5,7 @@ import { Activity, Brain, User, BookOpen, AlertCircle, Tag } from "lucide-react"
 import { motion } from "framer-motion";
 import SkeletonView from "@/components/SkeletonView";
 import ActionCapture from "@/components/ActionCapture";
+import Sparkline from "@/components/Sparkline";
 
 export default function Home() {
   const state = useBiome();
@@ -21,24 +22,27 @@ export default function Home() {
       </header>
 
       {/* Muse Brainwaves */}
-      <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl">
+      <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex flex-col">
         <div className="flex items-center gap-3 mb-4">
           <Brain className="text-purple-500" />
           <h2 className="text-xl font-semibold">Muse Feedback</h2>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 flex flex-col">
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Stress Index</span>
             <span className={`font-mono text-xl ${state.muse?.stress_index && state.muse.stress_index > 0.7 ? 'text-red-500' : 'text-green-500'}`}>
               {state.muse?.stress_index.toFixed(2) || "0.00"}
             </span>
           </div>
-          <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
+          <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden mb-2">
             <motion.div 
               className="bg-purple-600 h-full"
               initial={{ width: 0 }}
               animate={{ width: `${(state.muse?.stress_index || 0) * 100}%` }}
             />
+          </div>
+          <div className="h-24 w-full bg-zinc-800/30 rounded-xl mt-4">
+            <Sparkline data={state.history.stressIndex} color="#a855f7" />
           </div>
         </div>
       </section>
@@ -64,12 +68,12 @@ export default function Home() {
       </section>
 
       {/* Heart Sense */}
-      <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl">
+      <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex flex-col">
         <div className="flex items-center gap-3 mb-4">
           <Activity className="text-red-500" />
           <h2 className="text-xl font-semibold">Heart Sense</h2>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="bg-zinc-800/30 p-4 rounded-xl">
             <p className="text-xs text-gray-500 uppercase font-bold">Heart Rate</p>
             <p className="text-3xl font-mono">{state.heart?.heart_rate || "--"} <span className="text-sm">BPM</span></p>
@@ -78,6 +82,9 @@ export default function Home() {
             <p className="text-xs text-gray-500 uppercase font-bold">HRV</p>
             <p className="text-3xl font-mono">{state.heart?.hrv || "--"}</p>
           </div>
+        </div>
+        <div className="h-24 w-full bg-zinc-800/30 rounded-xl mt-auto">
+          <Sparkline data={state.history.heartRate} color="#ef4444" />
         </div>
       </section>
 

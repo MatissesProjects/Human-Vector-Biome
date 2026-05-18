@@ -2,29 +2,63 @@
 
 import { useEffect, useState, createContext, useContext } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { BiomeState, TelemetryPayload } from '../../../src/types';
+import { BiomeState, TelemetryPayload, HeartBiometrics, MuseBrainwaves } from '../../../src/types';
 import { toast } from 'sonner';
 
-const BiomeContext = createContext<BiomeState | null>(null);
+export type DashboardState = BiomeState & {
+  history: {
+    heartRate: { time: string; value: number }[];
+    stressIndex: { time: string; value: number }[];
+  }
+};
+
+const BiomeContext = createContext<DashboardState | null>(null);
 
 export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [state, setState] = useState<BiomeState>({
+  const [state, setState] = useState<DashboardState>({
     posture: null,
     heart: null,
     muse: null,
     story: null,
     lastPillEvent: null,
-    actions: []
+    actions: [],
+    history: {
+      heartRate: [],
+      stressIndex: []
+    }
   });
 
   useEffect(() => {
     const socket = io('http://localhost:3000');
 
     const updateState = (payload: TelemetryPayload) => {
-      setState((prev) => ({
-        ...prev,
-        [payload.project]: payload.data,
-      }));
+      setState((prev) => {
+        const next = { ...prev, [payload.project]: payload.data };
+        
+        let newHistory = prev.history;
+        const now = new Date().toLocaleTimeString();
+
+        if (payload.project === 'heart') {
+            const hr = (payload.data as HeartBiometrics).heart_rate;
+            if (hr) {
+                newHistory = {
+                   ...newHistory,
+                   heartRate: [...newHistory.heartRate, { time: now, value: hr }].slice(-30)
+                };
+            }
+        }
+        if (payload.project === 'muse') {
+            const stress = (payload.data as MuseBrainwaves).stress_index;
+            if (stress !== undefined) {
+                newHistory = {
+                   ...newHistory,
+                   stressIndex: [...newHistory.stressIndex, { time: now, value: stress }].slice(-30)
+                };
+            }
+        }
+
+        return { ...next, history: newHistory };
+      });
     };
 
     // Listen for both event types
