@@ -8,9 +8,11 @@ import ActionCapture from "@/components/ActionCapture";
 import Sparkline from "@/components/Sparkline";
 import PulseOrb from "@/components/PulseOrb";
 import NextBestAction from "@/components/NextBestAction";
+import { useIsStale } from "@/hooks/useIsStale";
 
 export default function Home() {
   const state = useBiome();
+  const isMuseStale = useIsStale(state?.muse?.timestamp);
 
   if (!state) return <div>Initializing Biome Hub...</div>;
 
@@ -23,32 +25,48 @@ export default function Home() {
         <p className="text-gray-400">Human-Vector-Biome Central Command</p>
       </header>
 
-      <NextBestAction stressIndex={state.muse?.stress_index} />
+      <NextBestAction stressIndex={isMuseStale ? null : state.muse?.stress_index} />
 
       {/* Muse Brainwaves */}
-      <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex flex-col">
-        <div className="flex items-center gap-3 mb-4">
-          <Brain className="text-purple-500" />
-          <h2 className="text-xl font-semibold">Muse Feedback</h2>
-        </div>
-        <div className="space-y-4 flex-1 flex flex-col">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400">Stress Index</span>
-            <span className={`font-mono text-xl ${state.muse?.stress_index && state.muse.stress_index > 0.7 ? 'text-red-500' : 'text-green-500'}`}>
-              {state.muse?.stress_index.toFixed(2) || "0.00"}
+      <section className={`bg-zinc-900/50 border p-6 rounded-2xl flex flex-col transition-colors duration-500 ${isMuseStale ? 'border-zinc-800/50 opacity-70' : 'border-zinc-800'}`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Brain className={isMuseStale ? "text-zinc-600" : "text-purple-500"} />
+            <h2 className="text-xl font-semibold">Muse Feedback</h2>
+          </div>
+          {isMuseStale && (
+            <span className="text-[10px] uppercase tracking-widest bg-zinc-800 text-zinc-400 px-2 py-1 rounded-full flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" /> Offline / Charging
             </span>
-          </div>
-          <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden mb-2">
-            <motion.div 
-              className="bg-purple-600 h-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${(state.muse?.stress_index || 0) * 100}%` }}
-            />
-          </div>
-          <div className="h-24 w-full bg-zinc-800/30 rounded-xl mt-4">
-            <Sparkline data={state.history.stressIndex} color="#a855f7" />
-          </div>
+          )}
         </div>
+        
+        {isMuseStale ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 py-8 border border-dashed border-zinc-800 rounded-xl bg-black/20">
+                <Brain size={48} className="mb-4 opacity-20" />
+                <p className="text-sm">Headband disconnected.</p>
+                <p className="text-xs mt-1">Waiting for telemetry stream to resume...</p>
+            </div>
+        ) : (
+            <div className="space-y-4 flex-1 flex flex-col">
+            <div className="flex justify-between items-center">
+                <span className="text-gray-400">Stress Index</span>
+                <span className={`font-mono text-xl ${state.muse?.stress_index && state.muse.stress_index > 0.7 ? 'text-red-500' : 'text-green-500'}`}>
+                {state.muse?.stress_index.toFixed(2) || "0.00"}
+                </span>
+            </div>
+            <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden mb-2">
+                <motion.div 
+                className="bg-purple-600 h-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${(state.muse?.stress_index || 0) * 100}%` }}
+                />
+            </div>
+            <div className="h-24 w-full bg-zinc-800/30 rounded-xl mt-4">
+                <Sparkline data={state.history.stressIndex} color="#a855f7" />
+            </div>
+            </div>
+        )}
       </section>
 
       {/* Posture Sense */}
