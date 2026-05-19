@@ -67,20 +67,51 @@ socket.on('connect', () => {
     });
   }, 4000);
 
-  // 4. Simulate Chair
+  // 4. Simulate Chair & Desk Height
+  let isStanding = false;
   setInterval(() => {
-    console.log(`[Mock Chair] Sending pressure telemetry`);
+    // Randomly switch between sitting and standing height to show UI changes every few cycles
+    if (Math.random() > 0.8) {
+      isStanding = !isStanding;
+    }
+    
+    const height = isStanding ? 110.0 + Math.random() * 2 : 72.0 + Math.random() * 1;
+    console.log(`[Mock Desk] Sending height: ${height.toFixed(1)}cm`);
     socket.emit('telemetry', {
-      project: 'chair',
+      project: 'desk',
       data: {
         timestamp: new Date().toISOString(),
-        left_pressure: Math.random() * 20 + 30, // Example: leaning right
-        right_pressure: Math.random() * 20 + 50,
-        front_pressure: Math.random() * 10 + 20,
-        back_pressure: Math.random() * 20 + 40
+        height_cm: height,
+        state: isStanding ? 'STANDING' : 'SITTING'
       }
     });
-  }, 3500);
+
+    if (!isStanding) {
+      console.log(`[Mock Chair] Sending pressure telemetry`);
+      socket.emit('telemetry', {
+        project: 'chair',
+        data: {
+          timestamp: new Date().toISOString(),
+          left_pressure: Math.random() * 20 + 30, // Example: leaning right
+          right_pressure: Math.random() * 20 + 50,
+          front_pressure: Math.random() * 10 + 20,
+          back_pressure: Math.random() * 20 + 40
+        }
+      });
+    } else {
+      console.log(`[Mock Chair] Standing - Pressure is 0`);
+      socket.emit('telemetry', {
+        project: 'chair',
+        data: {
+          timestamp: new Date().toISOString(),
+          left_pressure: 0,
+          right_pressure: 0,
+          front_pressure: 0,
+          back_pressure: 0
+        }
+      });
+    }
+  }, 4000);
 });
 
 socket.on('intervention', (data: { target: string, type: string, message: string }) => {

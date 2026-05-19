@@ -233,6 +233,7 @@ io.on('connection', (socket: Socket) => {
     if (project === 'story') state.story = data;
     if (project === 'environment') state.environment = data;
     if (project === 'chair') state.chair = data;
+    if (project === 'desk') state.desk = data;
 
     // Capture telemetry if a session is active and stream is selected
     if (activeCapture && activeCapture.streams.includes(project as string)) {

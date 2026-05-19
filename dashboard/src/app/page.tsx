@@ -185,13 +185,24 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-                {state.chair && (
-                  <div className="mt-4 bg-zinc-800/30 p-4 rounded-xl">
-                     <p className="text-xs text-gray-500 uppercase font-bold mb-2 text-center">Chair Pressure</p>
-                     <div className="flex justify-between items-center px-4">
-                       <span className="text-xs text-zinc-400">L: {state.chair.left_pressure.toFixed(0)}</span>
-                       <span className="text-xs text-zinc-400">R: {state.chair.right_pressure.toFixed(0)}</span>
-                     </div>
+                {(state.chair || state.desk) && (
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    {(state.chair && state.desk?.state !== 'STANDING') && (
+                      <div className="bg-zinc-800/30 p-4 rounded-xl">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-2 text-center">Chair Pressure</p>
+                        <div className="flex justify-between items-center px-2">
+                          <span className="text-xs text-zinc-400">L: {state.chair.left_pressure.toFixed(0)}</span>
+                          <span className="text-xs text-zinc-400">R: {state.chair.right_pressure.toFixed(0)}</span>
+                        </div>
+                      </div>
+                    )}
+                    {state.desk && (
+                      <div className={`bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center ${state.desk.state === 'STANDING' ? 'col-span-2' : ''}`}>
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1 text-center">Desk State</p>
+                        <p className="text-sm font-bold text-white uppercase tracking-wider">{state.desk.state}</p>
+                        <p className="text-[10px] text-zinc-500">{state.desk.height_cm.toFixed(1)} cm</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </section>

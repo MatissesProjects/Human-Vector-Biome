@@ -82,6 +82,12 @@ export interface ChairTelemetry {
   back_pressure: number;
 }
 
+export interface DeskTelemetry {
+  timestamp: string;
+  height_cm: number;
+  state: 'STANDING' | 'SITTING' | 'TRANSITIONING' | 'UNKNOWN';
+}
+
 export interface WeatherTelemetry {
   timestamp: string;
   temperature: number;
@@ -98,10 +104,11 @@ export interface BiomeState {
   actions: UserAction[];
   environment: EnvironmentTelemetry | null;
   chair: ChairTelemetry | null;
+  desk: DeskTelemetry | null;
   weather: WeatherTelemetry | null;
 }
 
-export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions' | 'environment' | 'chair' | 'weather';
+export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions' | 'environment' | 'chair' | 'desk' | 'weather';
 
 export type TelemetryPayload = 
   | { project: 'posture'; data: PostureTelemetry }
@@ -112,5 +119,6 @@ export type TelemetryPayload =
   | { project: 'actions'; data: UserAction }
   | { project: 'environment'; data: EnvironmentTelemetry }
   | { project: 'chair'; data: ChairTelemetry }
+  | { project: 'desk'; data: DeskTelemetry }
   | { project: 'weather'; data: WeatherTelemetry }
   | { project: 'echo'; data: unknown };

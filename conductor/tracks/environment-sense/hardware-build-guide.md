@@ -10,6 +10,7 @@ To build the combined Environment and Chair node, you will need:
 *   **Air Quality Sensor:** SCD30 (Sensirion) - An incredibly accurate NDIR CO2, Temperature, and Humidity sensor. It communicates over I2C.
 *   **Chair Pressure Sensors:** 4x Force Sensitive Resistors (FSR 402 or similar).
 *   **Resistors:** 4x 10kΩ resistors (for the FSR voltage dividers).
+*   **Desk Height Sensor:** HC-SR04 Ultrasonic Range Finder.
 *   **Misc:** Breadboard, jumper wires, a micro-USB/USB-C cable for power.
 
 ---
@@ -22,6 +23,13 @@ The SCD30 uses the I2C protocol.
 *   **GND** -> ESP32 GND
 *   **SCL** -> ESP32 GPIO 22 (Standard SCL)
 *   **SDA** -> ESP32 GPIO 21 (Standard SDA)
+
+### The HC-SR04 (Desk Height)
+Mount this pointing directly down at the floor from the underside of the desk.
+*   **VCC** -> ESP32 5V (or VIN)
+*   **GND** -> ESP32 GND
+*   **TRIG** -> ESP32 GPIO 5
+*   **ECHO** -> ESP32 GPIO 18 (Note: HC-SR04 Echo output is 5V. Use a logic level converter or a simple voltage divider (1kΩ and 2kΩ) to drop it to 3.3V before connecting to GPIO 18 to protect the ESP32).
 
 ### The FSRs (Smart Chair)
 An FSR acts like a variable resistor; the harder you press, the lower the resistance. We need to create a "Voltage Divider" circuit for each of the 4 sensors to read this as an analog voltage.
@@ -68,11 +76,17 @@ const int FSR_RIGHT = 33;
 const int FSR_FRONT = 34;
 const int FSR_BACK = 35;
 
+const int TRIG_PIN = 5;
+const int ECHO_PIN = 18;
+
 SCD30 airSensor;
 
 void setup() {
   Serial.begin(115200);
   Wire.begin(); // Start I2C
+
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
@@ -107,6 +121,19 @@ void postTelemetry(String project, String jsonPayload) {
   }
 }
 
+float getDeskHeightCm() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  long duration = pulseIn(ECHO_PIN, HIGH);
+  // Speed of sound is 343 m/s = 0.0343 cm/us
+  // Divide by 2 for the round trip
+  return (duration * 0.0343) / 2.0;
+}
+
 void loop() {
   // --- 1. Read & Send Environment Data ---
   if (airSensor.dataAvailable()) {
@@ -120,23 +147,35 @@ void loop() {
     postTelemetry("environment", envJson);
   }
 
-  // --- 2. Read & Send Chair Data ---
-  // Read analog values (0-4095 on ESP32)
-  int left = analogRead(FSR_LEFT);
-  int right = analogRead(FSR_RIGHT);
-  int front = analogRead(FSR_FRONT);
-  int back = analogRead(FSR_BACK);
-
-  // Map the raw 12-bit ADC value (0-4095) to a more readable 0-100 scale if desired
-  StaticJsonDocument<200> chairDoc;
-  chairDoc["left_pressure"] = map(left, 0, 4095, 0, 100);
-  chairDoc["right_pressure"] = map(right, 0, 4095, 0, 100);
-  chairDoc["front_pressure"] = map(front, 0, 4095, 0, 100);
-  chairDoc["back_pressure"] = map(back, 0, 4095, 0, 100);
+  // --- 2. Read & Send Desk Data ---
+  float height = getDeskHeightCm();
+  String state = height > 90.0 ? "STANDING" : "SITTING"; // Adjust threshold as needed
   
-  String chairJson;
-  serializeJson(chairDoc, chairJson);
-  postTelemetry("chair", chairJson);
+  StaticJsonDocument<200> deskDoc;
+  deskDoc["height_cm"] = height;
+  deskDoc["state"] = state;
+  
+  String deskJson;
+  serializeJson(deskDoc, deskJson);
+  postTelemetry("desk", deskJson);
+
+  // --- 3. Read & Send Chair Data (Only if Sitting) ---
+  if (state == "SITTING") {
+    int left = analogRead(FSR_LEFT);
+    int right = analogRead(FSR_RIGHT);
+    int front = analogRead(FSR_FRONT);
+    int back = analogRead(FSR_BACK);
+
+    StaticJsonDocument<200> chairDoc;
+    chairDoc["left_pressure"] = map(left, 0, 4095, 0, 100);
+    chairDoc["right_pressure"] = map(right, 0, 4095, 0, 100);
+    chairDoc["front_pressure"] = map(front, 0, 4095, 0, 100);
+    chairDoc["back_pressure"] = map(back, 0, 4095, 0, 100);
+    
+    String chairJson;
+    serializeJson(chairDoc, chairJson);
+    postTelemetry("chair", chairJson);
+  }
 
   // Wait 4 seconds before next sample
   delay(4000); 
