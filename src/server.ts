@@ -43,7 +43,9 @@ const state: BiomeState = {
   actions: [],
   environment: null,
   chair: null,
-  weather: null
+  desk: null,
+  weather: null,
+  baseline: null
 };
 
 let activeCapture: { id: string, label: string, streams: string[] } | null = null;
@@ -115,13 +117,16 @@ function persistTelemetrySample(actionId: string, label: string, project: string
  * Logic that coordinates between projects
  */
 function runInterventions() {
+  // Determine stress threshold based on daily readiness baseline
+  const baseStressThreshold = state.baseline?.readiness_score && state.baseline.readiness_score < 60 ? 0.6 : 0.8;
+
   // 1. Stress -> Story Relaxation Nudge
-  if (state.muse && state.muse.stress_index > 0.8) {
-    console.log('[Intervention] High Stress detected. Sending Story relaxation nudge.');
+  if (state.muse && state.muse.stress_index > baseStressThreshold) {
+    console.log(`[Intervention] High Stress detected (Threshold: ${baseStressThreshold}). Sending Story relaxation nudge.`);
     io.emit('intervention', {
       target: 'story',
       type: 'RELAXATION_SUGGESTION',
-      message: 'Your stress levels are climbing. Would you like to start a calming story session?'
+      message: 'Your stress levels are climbing, especially considering your overnight baseline. Would you like to start a calming story session?'
     });
   }
 
@@ -234,6 +239,7 @@ io.on('connection', (socket: Socket) => {
     if (project === 'environment') state.environment = data;
     if (project === 'chair') state.chair = data;
     if (project === 'desk') state.desk = data;
+    if (project === 'baseline') state.baseline = data;
 
     // Capture telemetry if a session is active and stream is selected
     if (activeCapture && activeCapture.streams.includes(project as string)) {

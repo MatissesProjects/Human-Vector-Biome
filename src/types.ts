@@ -95,6 +95,18 @@ export interface WeatherTelemetry {
   location: string;
 }
 
+export interface DailyBaseline {
+  timestamp: string;
+  sleep_score: number;
+  deep_sleep_minutes: number;
+  rem_sleep_minutes: number;
+  light_sleep_minutes: number;
+  overnight_avg_hr: number;
+  overnight_lowest_hr: number;
+  overnight_avg_spo2: number;
+  readiness_score: number;
+}
+
 export interface BiomeState {
   posture: PostureTelemetry | null;
   heart: HeartBiometrics | null;
@@ -106,9 +118,10 @@ export interface BiomeState {
   chair: ChairTelemetry | null;
   desk: DeskTelemetry | null;
   weather: WeatherTelemetry | null;
+  baseline: DailyBaseline | null;
 }
 
-export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions' | 'environment' | 'chair' | 'desk' | 'weather';
+export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions' | 'environment' | 'chair' | 'desk' | 'weather' | 'baseline';
 
 export type TelemetryPayload = 
   | { project: 'posture'; data: PostureTelemetry }
@@ -121,4 +134,5 @@ export type TelemetryPayload =
   | { project: 'chair'; data: ChairTelemetry }
   | { project: 'desk'; data: DeskTelemetry }
   | { project: 'weather'; data: WeatherTelemetry }
+  | { project: 'baseline'; data: DailyBaseline }
   | { project: 'echo'; data: unknown };

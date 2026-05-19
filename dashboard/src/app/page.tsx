@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useBiome } from "@/context/BiomeContext";
-import { Activity, Brain, User, BookOpen, AlertCircle, Tag, Dumbbell, Cloud } from "lucide-react";
+import { Activity, Brain, User, BookOpen, AlertCircle, Tag, Dumbbell, Cloud, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SkeletonView from "@/components/SkeletonView";
 import ActionCapture from "@/components/ActionCapture";
@@ -206,6 +206,36 @@ export default function Home() {
                   </div>
                 )}
               </section>
+
+              {/* Daily Baseline */}
+              {state.baseline && (
+                <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex flex-col col-span-1 md:col-span-2 lg:col-span-3">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Moon className="text-indigo-400" />
+                    <h2 className="text-xl font-semibold">Overnight Baseline</h2>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
+                      <p className="text-xs text-gray-500 uppercase font-bold mb-2">Readiness</p>
+                      <p className={`text-3xl font-bold ${state.baseline.readiness_score > 70 ? 'text-green-400' : 'text-orange-400'}`}>
+                        {state.baseline.readiness_score}
+                      </p>
+                    </div>
+                    <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
+                      <p className="text-xs text-gray-500 uppercase font-bold mb-2">Avg Heart Rate</p>
+                      <p className="text-3xl font-mono">{state.baseline.overnight_avg_hr} <span className="text-xs">BPM</span></p>
+                    </div>
+                    <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
+                      <p className="text-xs text-gray-500 uppercase font-bold mb-2">Sleep Score</p>
+                      <p className="text-3xl font-mono">{state.baseline.sleep_score}</p>
+                    </div>
+                    <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
+                      <p className="text-xs text-gray-500 uppercase font-bold mb-2">SpO2</p>
+                      <p className="text-3xl font-mono">{state.baseline.overnight_avg_spo2} <span className="text-xs">%</span></p>
+                    </div>
+                  </div>
+                </section>
+              )}
             </motion.div>
           )}
 

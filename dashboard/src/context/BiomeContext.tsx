@@ -26,6 +26,7 @@ export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
     chair: null,
     desk: null,
     weather: null,
+    baseline: null,
     history: {
       heartRate: [],
       stressIndex: []
@@ -75,6 +76,9 @@ export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
         }
         if (payload.project === 'story') {
             setState(prev => ({ ...prev, story: payload }));
+        }
+        if (payload.project === 'baseline') {
+            setState(prev => ({ ...prev, baseline: payload }));
         }
         if (payload.project === 'actions') {
             setState(prev => ({

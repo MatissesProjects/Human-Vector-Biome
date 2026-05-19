@@ -5,6 +5,22 @@ const socket = io('http://localhost:3000');
 socket.on('connect', () => {
   console.log('Connected to Biome Hub as Mock Client');
 
+  // Send a simulated daily baseline on connection
+  socket.emit('telemetry', {
+    project: 'baseline',
+    data: {
+      timestamp: new Date().toISOString(),
+      sleep_score: 82,
+      deep_sleep_minutes: 90,
+      rem_sleep_minutes: 110,
+      light_sleep_minutes: 240,
+      overnight_avg_hr: 54,
+      overnight_lowest_hr: 48,
+      overnight_avg_spo2: 97,
+      readiness_score: 55 // Setting this artificially low (<60) to test the dynamic threshold
+    }
+  });
+
   // 1. Simulate Muse Brainwaves (Increasing Stress)
   setInterval(() => {
     const stress = Math.random() * 0.4 + 0.5; // Oscillate around 0.5 - 0.9
@@ -84,7 +100,7 @@ socket.on('connect', () => {
         height_cm: height,
         state: isStanding ? 'STANDING' : 'SITTING'
       }
-    });
+    }, 8000);
 
     if (!isStanding) {
       console.log(`[Mock Chair] Sending pressure telemetry`);
