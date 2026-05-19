@@ -105,6 +105,8 @@ export interface DailyBaseline {
   overnight_lowest_hr: number;
   overnight_avg_spo2: number;
   readiness_score: number;
+  muse_calibration_completed: boolean;
+  muse_baseline_stress?: number;
 }
 
 export interface BiomeState {

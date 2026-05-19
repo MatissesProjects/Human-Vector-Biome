@@ -6,9 +6,7 @@ socket.on('connect', () => {
   console.log('Connected to Biome Hub as Mock Client');
 
   // Send a simulated daily baseline on connection
-  socket.emit('telemetry', {
-    project: 'baseline',
-    data: {
+  const baselineTemplate = {
       timestamp: new Date().toISOString(),
       sleep_score: 82,
       deep_sleep_minutes: 90,
@@ -17,9 +15,27 @@ socket.on('connect', () => {
       overnight_avg_hr: 54,
       overnight_lowest_hr: 48,
       overnight_avg_spo2: 97,
-      readiness_score: 55 // Setting this artificially low (<60) to test the dynamic threshold
-    }
+      readiness_score: 55, // Setting this artificially low (<60) to test the dynamic threshold
+      muse_calibration_completed: false
+  };
+
+  socket.emit('telemetry', {
+    project: 'baseline',
+    data: baselineTemplate
   });
+
+  // Simulate user doing their morning Muse calibration after 12 seconds
+  setTimeout(() => {
+    console.log('[Mock Baseline] Muse calibration completed.');
+    socket.emit('telemetry', {
+      project: 'baseline',
+      data: {
+        ...baselineTemplate,
+        muse_calibration_completed: true,
+        muse_baseline_stress: 0.35
+      }
+    });
+  }, 12000);
 
   // 1. Simulate Muse Brainwaves (Increasing Stress)
   setInterval(() => {

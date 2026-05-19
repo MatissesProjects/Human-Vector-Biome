@@ -212,9 +212,9 @@ export default function Home() {
                 <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex flex-col col-span-1 md:col-span-2 lg:col-span-3">
                   <div className="flex items-center gap-3 mb-4">
                     <Moon className="text-indigo-400" />
-                    <h2 className="text-xl font-semibold">Overnight Baseline</h2>
+                    <h2 className="text-xl font-semibold">Daily Baseline</h2>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
                       <p className="text-xs text-gray-500 uppercase font-bold mb-2">Readiness</p>
                       <p className={`text-3xl font-bold ${state.baseline.readiness_score > 70 ? 'text-green-400' : 'text-orange-400'}`}>
@@ -232,6 +232,14 @@ export default function Home() {
                     <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
                       <p className="text-xs text-gray-500 uppercase font-bold mb-2">SpO2</p>
                       <p className="text-3xl font-mono">{state.baseline.overnight_avg_spo2} <span className="text-xs">%</span></p>
+                    </div>
+                    <div className={`bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center ${!state.baseline.muse_calibration_completed ? 'border border-yellow-500/50' : ''}`}>
+                      <p className="text-xs text-gray-500 uppercase font-bold mb-2 text-center">Muse Focus</p>
+                      {state.baseline.muse_calibration_completed ? (
+                        <p className="text-3xl font-mono text-purple-400">{state.baseline.muse_baseline_stress?.toFixed(2)}</p>
+                      ) : (
+                        <p className="text-xs font-bold text-yellow-500 text-center uppercase tracking-wider animate-pulse pt-2">Needs Calibration</p>
+                      )}
                     </div>
                   </div>
                 </section>

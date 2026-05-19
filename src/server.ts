@@ -118,11 +118,18 @@ function persistTelemetrySample(actionId: string, label: string, project: string
  */
 function runInterventions() {
   // Determine stress threshold based on daily readiness baseline
-  const baseStressThreshold = state.baseline?.readiness_score && state.baseline.readiness_score < 60 ? 0.6 : 0.8;
+  let baseStressThreshold = 0.8;
+  if (state.baseline) {
+    if (state.baseline.readiness_score < 60) baseStressThreshold -= 0.1;
+    if (state.baseline.muse_calibration_completed && state.baseline.muse_baseline_stress) {
+       // If their morning baseline is already known, trigger sooner if it spikes by 0.25
+       baseStressThreshold = Math.min(baseStressThreshold, state.baseline.muse_baseline_stress + 0.25);
+    }
+  }
 
   // 1. Stress -> Story Relaxation Nudge
   if (state.muse && state.muse.stress_index > baseStressThreshold) {
-    console.log(`[Intervention] High Stress detected (Threshold: ${baseStressThreshold}). Sending Story relaxation nudge.`);
+    console.log(`[Intervention] High Stress detected (Threshold: ${baseStressThreshold.toFixed(2)}). Sending Story relaxation nudge.`);
     io.emit('intervention', {
       target: 'story',
       type: 'RELAXATION_SUGGESTION',
