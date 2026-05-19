@@ -37,6 +37,30 @@ socket.on('connect', () => {
     });
   }, 12000);
 
+  // Simulate Heart & Motion State
+  let isWalking = false;
+  setInterval(() => {
+    // Switch to walking 20% of the time to simulate breaks
+    if (Math.random() > 0.8) {
+      isWalking = !isWalking;
+    }
+    
+    const heartRate = isWalking ? Math.floor(Math.random() * 20) + 100 : Math.floor(Math.random() * 15) + 60;
+    console.log(`[Mock Heart] Sending HR: ${heartRate}, Motion: ${isWalking ? 'WALKING' : 'STATIONARY'}`);
+    
+    socket.emit('telemetry', {
+      project: 'heart',
+      data: {
+        timestamp: new Date().toISOString(),
+        heart_rate: heartRate,
+        hrv: isWalking ? 40 : 65,
+        is_anomaly_detected: false,
+        motion_state: isWalking ? 'WALKING' : 'STATIONARY',
+        spo2: 98
+      }
+    });
+  }, 3500);
+
   // 1. Simulate Muse Brainwaves (Increasing Stress)
   setInterval(() => {
     const stress = Math.random() * 0.4 + 0.5; // Oscillate around 0.5 - 0.9

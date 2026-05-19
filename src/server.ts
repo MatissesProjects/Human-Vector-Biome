@@ -240,7 +240,39 @@ io.on('connection', (socket: Socket) => {
              io.emit('project_event', { project: 'actions', data: actionEvent });
         }
     }
-    if (project === 'heart') state.heart = data;
+    if (project === 'heart') {
+        const prevMotion = state.heart?.motion_state;
+        const newMotion = (data as any).motion_state;
+        
+        state.heart = data;
+
+        // Auto-detect Walking Breaks
+        if (prevMotion === 'STATIONARY' && newMotion === 'WALKING') {
+            console.log('[Auto-Capture] Detected Walking Break started.');
+            const actionEvent: UserAction = {
+               id: Math.random().toString(36).substr(2, 9),
+               timestamp: new Date().toISOString(),
+               label: 'Walking Break',
+               type: 'START',
+               metadata: { source: 'MOTION_SENSOR' }
+            };
+            state.actions.push(actionEvent);
+            if (state.actions.length > 50) state.actions.shift();
+            io.emit('project_event', { project: 'actions', data: actionEvent });
+        } else if (prevMotion === 'WALKING' && newMotion === 'STATIONARY') {
+            console.log('[Auto-Capture] Detected Walking Break ended.');
+            const actionEvent: UserAction = {
+               id: Math.random().toString(36).substr(2, 9),
+               timestamp: new Date().toISOString(),
+               label: 'Walking Break',
+               type: 'STOP',
+               metadata: { source: 'MOTION_SENSOR' }
+            };
+            state.actions.push(actionEvent);
+            if (state.actions.length > 50) state.actions.shift();
+            io.emit('project_event', { project: 'actions', data: actionEvent });
+        }
+    }
     if (project === 'muse') state.muse = data;
     if (project === 'story') state.story = data;
     if (project === 'environment') state.environment = data;
