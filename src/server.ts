@@ -6,7 +6,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import type { BiomeState, ProjectType, UserAction, TelemetryPayload } from './types.js';
+import type { BiomeState, ProjectType, UserAction, TelemetryPayload, WeatherTelemetry } from './types.js';
 import { ActionRecognizer } from './recognizer.js';
 
 dotenv.config();
@@ -40,10 +40,45 @@ const state: BiomeState = {
   muse: null,
   story: null,
   lastPillEvent: null,
-  actions: []
+  actions: [],
+  environment: null,
+  chair: null,
+  weather: null
 };
 
 let activeCapture: { id: string, label: string, streams: string[] } | null = null;
+
+/**
+ * Fetch Local Weather
+ */
+async function fetchLocalWeather() {
+  try {
+    // Example using Open-Meteo (no API key required) for a default location (e.g. SF or local)
+    const lat = 37.7749;
+    const lon = -122.4194;
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+    const data: any = await res.json();
+    
+    if (data && data.current_weather) {
+      const weatherData: WeatherTelemetry = {
+        timestamp: new Date().toISOString(),
+        temperature: data.current_weather.temperature,
+        condition: `Code: ${data.current_weather.weathercode}`, // Using WMO code for simplicity
+        location: 'San Francisco, CA' // Mocked location
+      };
+      state.weather = weatherData;
+      io.emit('dashboard_update', { project: 'weather', data: weatherData });
+      console.log(`[Weather] Updated: ${weatherData.temperature}°C`);
+    }
+  } catch (err) {
+    console.error('[Weather] Failed to fetch local weather:', err);
+  }
+}
+
+// Initial fetch and interval (every 15 mins)
+fetchLocalWeather();
+setInterval(fetchLocalWeather, 15 * 60 * 1000);
+
 
 /**
  * Persistence Layer for Training Data
@@ -98,6 +133,16 @@ function runInterventions() {
        type: 'HAPTIC_TAP',
        message: 'Straighten your back.'
      });
+  }
+
+  // 3. Environment -> Open Window
+  if (state.environment && state.environment.co2 > 1000) {
+    console.log('[Intervention] High CO2 detected. Sending Alert.');
+    io.emit('intervention', {
+      target: 'dashboard',
+      type: 'ENVIRONMENT_WARNING',
+      message: 'CO2 levels are high (>1000ppm). Please open a window to improve focus and air quality.'
+    });
   }
 }
 
@@ -186,6 +231,8 @@ io.on('connection', (socket: Socket) => {
     if (project === 'heart') state.heart = data;
     if (project === 'muse') state.muse = data;
     if (project === 'story') state.story = data;
+    if (project === 'environment') state.environment = data;
+    if (project === 'chair') state.chair = data;
 
     // Capture telemetry if a session is active and stream is selected
     if (activeCapture && activeCapture.streams.includes(project as string)) {

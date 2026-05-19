@@ -67,6 +67,28 @@ export interface UserAction {
   stateSnapshot?: Partial<BiomeState>;
 }
 
+export interface EnvironmentTelemetry {
+  timestamp: string;
+  co2: number;
+  temperature: number;
+  humidity: number;
+}
+
+export interface ChairTelemetry {
+  timestamp: string;
+  left_pressure: number;
+  right_pressure: number;
+  front_pressure: number;
+  back_pressure: number;
+}
+
+export interface WeatherTelemetry {
+  timestamp: string;
+  temperature: number;
+  condition: string;
+  location: string;
+}
+
 export interface BiomeState {
   posture: PostureTelemetry | null;
   heart: HeartBiometrics | null;
@@ -74,9 +96,12 @@ export interface BiomeState {
   story: NarrativeState | null;
   lastPillEvent: PillEvent | null;
   actions: UserAction[];
+  environment: EnvironmentTelemetry | null;
+  chair: ChairTelemetry | null;
+  weather: WeatherTelemetry | null;
 }
 
-export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions';
+export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions' | 'environment' | 'chair' | 'weather';
 
 export type TelemetryPayload = 
   | { project: 'posture'; data: PostureTelemetry }
@@ -85,4 +110,7 @@ export type TelemetryPayload =
   | { project: 'story'; data: NarrativeState }
   | { project: 'pills'; data: PillEvent }
   | { project: 'actions'; data: UserAction }
+  | { project: 'environment'; data: EnvironmentTelemetry }
+  | { project: 'chair'; data: ChairTelemetry }
+  | { project: 'weather'; data: WeatherTelemetry }
   | { project: 'echo'; data: unknown };

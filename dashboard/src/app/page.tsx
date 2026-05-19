@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useBiome } from "@/context/BiomeContext";
-import { Activity, Brain, User, BookOpen, AlertCircle, Tag, Dumbbell } from "lucide-react";
+import { Activity, Brain, User, BookOpen, AlertCircle, Tag, Dumbbell, Cloud } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SkeletonView from "@/components/SkeletonView";
 import ActionCapture from "@/components/ActionCapture";
@@ -149,6 +149,51 @@ export default function Home() {
                       <p className="text-sm text-zinc-300 mt-2 italic">{state.posture.analysis.feedback}</p>
                     </div>
                 ) : <p className="text-xs text-center italic text-zinc-600">Waiting for telemetry...</p>}
+              </section>
+
+              {/* Environment */}
+              <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex flex-col">
+                <div className="flex items-center gap-3 mb-4">
+                  <Cloud className="text-cyan-500" />
+                  <h2 className="text-xl font-semibold">Environment</h2>
+                </div>
+                <div className="grid grid-cols-2 gap-4 flex-1">
+                  <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-2">CO2</p>
+                    <p className={`text-3xl font-mono ${state.environment && state.environment.co2 > 1000 ? 'text-red-400' : 'text-cyan-400'}`}>
+                      {state.environment?.co2 || "--"} <span className="text-xs">ppm</span>
+                    </p>
+                  </div>
+                  <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-2">Room Temp</p>
+                    <p className="text-3xl font-mono">{state.environment?.temperature?.toFixed(1) || "--"} <span className="text-xs">°C</span></p>
+                  </div>
+                  <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-2">Humidity</p>
+                    <p className="text-3xl font-mono">{state.environment?.humidity?.toFixed(1) || "--"} <span className="text-xs">%</span></p>
+                  </div>
+                  {state.weather ? (
+                    <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center">
+                      <p className="text-xs text-gray-500 uppercase font-bold mb-2">Outside</p>
+                      <p className="text-3xl font-mono">{state.weather.temperature} <span className="text-xs">°C</span></p>
+                      <p className="text-[10px] text-zinc-400 mt-1 uppercase tracking-widest">{state.weather.location}</p>
+                    </div>
+                  ) : (
+                    <div className="bg-zinc-800/30 p-4 rounded-xl flex flex-col justify-center items-center opacity-50">
+                      <p className="text-xs text-gray-500 uppercase font-bold mb-2">Weather</p>
+                      <p className="text-sm font-mono italic">Loading...</p>
+                    </div>
+                  )}
+                </div>
+                {state.chair && (
+                  <div className="mt-4 bg-zinc-800/30 p-4 rounded-xl">
+                     <p className="text-xs text-gray-500 uppercase font-bold mb-2 text-center">Chair Pressure</p>
+                     <div className="flex justify-between items-center px-4">
+                       <span className="text-xs text-zinc-400">L: {state.chair.left_pressure.toFixed(0)}</span>
+                       <span className="text-xs text-zinc-400">R: {state.chair.right_pressure.toFixed(0)}</span>
+                     </div>
+                  </div>
+                )}
               </section>
             </motion.div>
           )}

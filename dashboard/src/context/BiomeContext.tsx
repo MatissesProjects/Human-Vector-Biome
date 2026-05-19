@@ -22,6 +22,9 @@ export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
     story: null,
     lastPillEvent: null,
     actions: [],
+    environment: null,
+    chair: null,
+    weather: null,
     history: {
       heartRate: [],
       stressIndex: []

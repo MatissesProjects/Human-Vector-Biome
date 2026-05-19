@@ -35,7 +35,8 @@ socket.on('connect', () => {
         analysis: {
           score: score,
           status: score > 7 ? 'SLOUCHING' : 'GOOD',
-          feedback: score > 7 ? 'Sit up straight!' : 'Perfect posture.'
+          feedback: score > 7 ? 'Sit up straight!' : 'Perfect posture.',
+          nudge: 'Correct your posture'
         },
         pose: {
           nose: { x: 0, y: 1.2, z: -0.5 },
@@ -49,6 +50,37 @@ socket.on('connect', () => {
       }
     });
   }, 3000);
+
+  // 3. Simulate Environment
+  setInterval(() => {
+    // Oscillate CO2 around 900 - 1100 to occasionally trigger the intervention
+    const co2 = Math.floor(Math.random() * 300) + 800; 
+    console.log(`[Mock Environment] Sending CO2: ${co2}ppm`);
+    socket.emit('telemetry', {
+      project: 'environment',
+      data: {
+        timestamp: new Date().toISOString(),
+        co2: co2,
+        temperature: 22.5 + (Math.random() * 1.5 - 0.75),
+        humidity: 45 + (Math.random() * 5 - 2.5)
+      }
+    });
+  }, 4000);
+
+  // 4. Simulate Chair
+  setInterval(() => {
+    console.log(`[Mock Chair] Sending pressure telemetry`);
+    socket.emit('telemetry', {
+      project: 'chair',
+      data: {
+        timestamp: new Date().toISOString(),
+        left_pressure: Math.random() * 20 + 30, // Example: leaning right
+        right_pressure: Math.random() * 20 + 50,
+        front_pressure: Math.random() * 10 + 20,
+        back_pressure: Math.random() * 20 + 40
+      }
+    });
+  }, 3500);
 });
 
 socket.on('intervention', (data: { target: string, type: string, message: string }) => {
