@@ -9,3 +9,6 @@ yarn-error.log*
 .idea/
 .vscode/
 *.db
+logs/
+.antigravitycli/
+

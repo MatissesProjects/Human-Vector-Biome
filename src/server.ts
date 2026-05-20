@@ -6,7 +6,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import type { BiomeState, ProjectType, UserAction, TelemetryPayload, WeatherTelemetry } from './types.js';
+import type { BiomeState, ProjectType, UserAction, TelemetryPayload, WeatherTelemetry, SubjectiveLog } from './types.js';
 import { ActionRecognizer } from './recognizer.js';
 
 dotenv.config();
@@ -45,7 +45,8 @@ const state: BiomeState = {
   chair: null,
   desk: null,
   weather: null,
-  baseline: null
+  baseline: null,
+  subjective: null
 };
 
 let activeCapture: { id: string, label: string, streams: string[] } | null = null;
@@ -104,6 +105,16 @@ function persistAction(action: UserAction) {
   }
 }
 
+function persistSubjectiveLog(log: SubjectiveLog) {
+  const filePath = path.join(LOG_DIR, 'subjective.jsonl');
+  try {
+    fs.appendFileSync(filePath, JSON.stringify(log) + '\n');
+    console.log(`[Persistence] Logged subjective report at: ${log.timestamp}`);
+  } catch (err) {
+    console.error(`[Persistence] Failed to log subjective report to ${filePath}:`, err);
+  }
+}
+
 function persistTelemetrySample(actionId: string, label: string, project: string, data: unknown) {
   const filePath = path.join(LOG_DIR, 'capture_samples.jsonl');
   const entry = {
@@ -134,6 +145,23 @@ function runInterventions() {
        baseStressThreshold = Math.min(baseStressThreshold, state.baseline.muse_baseline_stress + 0.25);
     }
   }
+
+  // Adjust stress threshold dynamically based on subjective morning metrics
+  if (state.subjective) {
+    if (!state.subjective.woke_up_feeling_alright) {
+      baseStressThreshold -= 0.05;
+    }
+    if (state.subjective.pain !== 'none') {
+      baseStressThreshold -= 0.05;
+    }
+    if (state.subjective.vomit) {
+      baseStressThreshold -= 0.1;
+    }
+    if (state.subjective.wakeups_during_night > 2) {
+      baseStressThreshold -= 0.05;
+    }
+  }
+  baseStressThreshold = Math.max(0.4, baseStressThreshold); // Ensure we don't go below 0.4
 
   // 1. Stress -> Story Relaxation Nudge
   if (state.muse && state.muse.stress_index > baseStressThreshold) {
@@ -180,6 +208,10 @@ app.post('/api/events/:project', (req: Request, res: Response) => {
   // Update state for event-driven projects
   if (project === 'story') state.story = eventData;
   if (project === 'pills') state.lastPillEvent = eventData;
+  if (project === 'subjective') {
+    state.subjective = eventData;
+    persistSubjectiveLog(eventData);
+  }
 
   // Broadcast to all dashboard clients
   io.emit('project_event', { project, ...eventData });
@@ -300,6 +332,10 @@ io.on('connection', (socket: Socket) => {
     if (project === 'chair') state.chair = data;
     if (project === 'desk') state.desk = data;
     if (project === 'baseline') state.baseline = data;
+    if (project === 'subjective') {
+        state.subjective = data;
+        persistSubjectiveLog(data);
+    }
 
     // Capture telemetry if a session is active and stream is selected
     if (activeCapture && activeCapture.streams.includes(project as string)) {

@@ -109,6 +109,18 @@ export interface DailyBaseline {
   muse_baseline_stress?: number;
 }
 
+export interface SubjectiveLog {
+  timestamp: string;
+  woke_up_feeling_alright: boolean;
+  wakeups_during_night: number;
+  pain: 'none' | 'mild' | 'moderate' | 'severe';
+  pain_location?: string;
+  vomit: boolean;
+  bowel: 'normal' | 'constipated' | 'diarrhea' | 'none' | 'other';
+  urine: 'normal' | 'dark' | 'frequent' | 'burning' | 'none' | 'other';
+  notes?: string;
+}
+
 export interface BiomeState {
   posture: PostureTelemetry | null;
   heart: HeartBiometrics | null;
@@ -121,9 +133,10 @@ export interface BiomeState {
   desk: DeskTelemetry | null;
   weather: WeatherTelemetry | null;
   baseline: DailyBaseline | null;
+  subjective: SubjectiveLog | null;
 }
 
-export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions' | 'environment' | 'chair' | 'desk' | 'weather' | 'baseline';
+export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions' | 'environment' | 'chair' | 'desk' | 'weather' | 'baseline' | 'subjective';
 
 export type TelemetryPayload = 
   | { project: 'posture'; data: PostureTelemetry }
@@ -137,4 +150,5 @@ export type TelemetryPayload =
   | { project: 'desk'; data: DeskTelemetry }
   | { project: 'weather'; data: WeatherTelemetry }
   | { project: 'baseline'; data: DailyBaseline }
+  | { project: 'subjective'; data: SubjectiveLog }
   | { project: 'echo'; data: unknown };

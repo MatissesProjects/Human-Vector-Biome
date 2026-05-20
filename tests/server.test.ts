@@ -64,6 +64,24 @@ describe('Server REST API', () => {
       expect(response.status).toBe(200);
       expect(state.lastPillEvent).toEqual(eventData);
     });
+
+    it('should update state and return success for subjective events', async () => {
+      const eventData = {
+        timestamp: new Date().toISOString(),
+        woke_up_feeling_alright: true,
+        wakeups_during_night: 0,
+        pain: 'none',
+        vomit: false,
+        bowel: 'normal',
+        urine: 'normal'
+      };
+      const response = await request(app)
+        .post('/api/events/subjective')
+        .send(eventData);
+
+      expect(response.status).toBe(200);
+      expect(state.subjective).toEqual(eventData);
+    });
   });
 
   describe('POST /api/actions', () => {

@@ -9,3 +9,4 @@ This registry tracks the major feature initiatives and expansions for the Human-
 | `digital-context` | Digital Context Sense | Planned | Leverage the Pixel Phone for ambient context (Vocal Biomarkers, Screen Time, Light levels). |
 | `gait-sense` | Gait Sense | Planned | Track gait asymmetry, foot strike, and kinematics using smart insoles and velcro ankle IMUs. |
 | `advanced-biometrics` | Advanced Biometrics | Planned | Integrate cutting-edge biohacking sensors (CGM, rPPG, molecular tracking) via Health Connect and custom APIs. |
+| `subjective-logs` | Subjective Logs | In Progress | Track user-reported subjective metrics like wake-up wellness, pain, GI symptoms, and sleep disruptions. |
