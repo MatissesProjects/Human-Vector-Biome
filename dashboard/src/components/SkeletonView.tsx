@@ -17,6 +17,14 @@ export default function SkeletonView({ data }: { data: PostureTelemetry | null }
 
   return (
     <div className="w-full h-full bg-black rounded-xl overflow-hidden relative border border-zinc-800">
+      {data?.analysis.neck_angle !== undefined && (
+        <div className="absolute top-3 right-3 bg-zinc-950/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-zinc-800/80 z-10 flex flex-col items-end">
+          <span className="text-zinc-500 text-[9px] uppercase tracking-widest font-semibold">Neck Angle</span>
+          <span className={`text-lg font-bold font-mono ${data.analysis.neck_angle > 20 ? 'text-orange-400 animate-pulse' : 'text-emerald-400'}`}>
+            {data.analysis.neck_angle}°
+          </span>
+        </div>
+      )}
       {!data && (
         <div className="absolute inset-0 flex items-center justify-center text-zinc-600 text-xs italic z-10">
           Waiting for skeleton telemetry...

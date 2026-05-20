@@ -147,8 +147,13 @@ export default function Home() {
                    <SkeletonView data={state.posture} />
                 </div>
                 {state.posture ? (
-                    <div className="text-center bg-zinc-800/30 p-4 rounded-xl">
-                      <p className={`text-3xl font-bold ${state.posture.analysis.score > 80 ? 'text-green-400' : 'text-orange-400'}`}>
+                    <div className="text-center bg-zinc-800/30 p-4 rounded-xl relative overflow-hidden">
+                      {state.posture.analysis.is_looking_down_too_long && (
+                        <div className="absolute inset-x-0 top-0 bg-red-950/80 border-b border-red-800/50 py-1.5 text-red-200 text-[10px] font-bold uppercase tracking-wider animate-pulse flex items-center justify-center gap-1.5 z-10">
+                          <span>⚠️ Bottom Monitor Alert</span>
+                        </div>
+                      )}
+                      <p className={`text-3xl font-bold mt-3 ${state.posture.analysis.score > 80 ? 'text-green-400' : 'text-orange-400'}`}>
                         {state.posture.analysis.score}%
                       </p>
                       <p className="text-xs text-gray-400 uppercase tracking-widest mt-1">Posture Score</p>

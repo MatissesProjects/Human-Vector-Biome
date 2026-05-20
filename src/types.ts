@@ -13,6 +13,8 @@ export interface PostureTelemetry {
     nudge?: string;
     fatigue_index?: number;
     static_duration?: number;
+    neck_angle?: number;
+    is_looking_down_too_long?: boolean;
   };
   pose: Record<string, Vector3>;
   workspace?: Record<string, unknown>;

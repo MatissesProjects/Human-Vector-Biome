@@ -80,22 +80,51 @@ socket.on('connect', () => {
     });
   }, 2000);
 
-  // 2. Simulate Posture (Bad Posture)
+  // 2. Simulate Posture Cycle (GOOD -> SLOUCHING -> LOOKING_DOWN)
+  let postureTick = 0;
   setInterval(() => {
-    const score = Math.floor(Math.random() * 5) + 5; // 5-10 score
-    console.log(`[Mock Posture] Sending score: ${score}`);
+    postureTick++;
+    let score = 95;
+    let status = 'GOOD';
+    let feedback = 'Perfect posture.';
+    
+    // Normal head coordinates:
+    let noseY = 1.2;
+    let noseZ = -0.4;
+
+    // Cycle states:
+    // Ticks 1-5 (15s): GOOD
+    // Ticks 6-10 (15s): SLOUCHING (Low score)
+    // Ticks 11-20 (30s): LOOKING_DOWN (Tilted neck angle)
+    const cycle = postureTick % 20;
+
+    if (cycle >= 5 && cycle < 10) {
+      score = 35;
+      status = 'SLOUCHING';
+      feedback = 'Sit up straight!';
+      noseY = 1.15;
+      noseZ = -0.42;
+    } else if (cycle >= 10 && cycle < 20) {
+      score = 85;
+      status = 'LOOKING_DOWN';
+      feedback = 'Looking at bottom monitor.';
+      noseY = 1.05;
+      noseZ = -0.48; // Results in ~58 degrees neck angle
+    }
+
+    console.log(`[Mock Posture] Sending state: ${status} (Score: ${score})`);
     socket.emit('telemetry', {
       project: 'posture',
       data: {
         timestamp: new Date().toISOString(),
         analysis: {
           score: score,
-          status: score > 7 ? 'SLOUCHING' : 'GOOD',
-          feedback: score > 7 ? 'Sit up straight!' : 'Perfect posture.',
-          nudge: 'Correct your posture'
+          status: status,
+          feedback: feedback,
+          nudge: status === 'GOOD' ? undefined : 'Correct your posture'
         },
         pose: {
-          nose: { x: 0, y: 1.2, z: -0.5 },
+          nose: { x: 0, y: noseY, z: noseZ },
           left_shoulder: { x: -0.5, y: 1.0, z: -0.4 },
           right_shoulder: { x: 0.5, y: 1.0, z: -0.4 },
           left_elbow: { x: -0.7, y: 0.5, z: -0.3 },

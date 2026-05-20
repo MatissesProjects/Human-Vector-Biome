@@ -192,4 +192,78 @@ describe('Server REST API', () => {
       spyEmit.mockRestore();
     });
   });
+
+  describe('Posture Neck Angle and Bottom Monitor Alerts', () => {
+    it('should calculate correct neck angle and set is_looking_down_too_long if threshold is exceeded', async () => {
+      const { calculateNeckAngle } = await import('../src/server.js');
+      
+      const goodPose = {
+        nose: { x: 0, y: 1.2, z: -0.4 },
+        left_shoulder: { x: -0.5, y: 1.0, z: -0.4 },
+        right_shoulder: { x: 0.5, y: 1.0, z: -0.4 }
+      };
+      
+      const lookingDownPose = {
+        nose: { x: 0, y: 1.05, z: -0.48 },
+        left_shoulder: { x: -0.5, y: 1.0, z: -0.4 },
+        right_shoulder: { x: 0.5, y: 1.0, z: -0.4 }
+      };
+      
+      expect(calculateNeckAngle(goodPose)).toBe(0);
+      expect(calculateNeckAngle(lookingDownPose)).toBe(58);
+
+      const spyEmit = vi.spyOn(io, 'emit');
+
+      // Send telemetry with good pose
+      const goodResponse = await request(app)
+        .post('/api/events/posture')
+        .send({
+          timestamp: new Date().toISOString(),
+          analysis: { score: 90 },
+          pose: goodPose
+        });
+      
+      expect(goodResponse.status).toBe(200);
+      expect(state.posture?.analysis.neck_angle).toBe(0);
+      expect(state.posture?.analysis.is_looking_down_too_long).toBe(false);
+
+      // Send looking down pose (first time - should start timer but not exceed 15s)
+      const lookDownResponse1 = await request(app)
+        .post('/api/events/posture')
+        .send({
+          timestamp: new Date().toISOString(),
+          analysis: { score: 85 },
+          pose: lookingDownPose
+        });
+
+      expect(lookDownResponse1.status).toBe(200);
+      expect(state.posture?.analysis.neck_angle).toBe(58);
+      expect(state.posture?.analysis.is_looking_down_too_long).toBe(false);
+
+      // Fake timer/clock to simulate 16 seconds elapsed
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.now() + 16000);
+
+      // Send looking down pose again - should trigger alert!
+      const lookDownResponse2 = await request(app)
+        .post('/api/events/posture')
+        .send({
+          timestamp: new Date().toISOString(),
+          analysis: { score: 85 },
+          pose: lookingDownPose
+        });
+
+      expect(lookDownResponse2.status).toBe(200);
+      expect(state.posture?.analysis.is_looking_down_too_long).toBe(true);
+      expect(state.posture?.analysis.feedback).toContain('Looking down at bottom monitor');
+      expect(spyEmit).toHaveBeenCalledWith('intervention', expect.objectContaining({
+        target: 'heart',
+        type: 'HAPTIC_TAP',
+        message: expect.stringContaining('looking at the bottom monitor too long')
+      }));
+
+      vi.useRealTimers();
+      spyEmit.mockRestore();
+    });
+  });
 });

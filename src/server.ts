@@ -6,7 +6,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import type { BiomeState, ProjectType, UserAction, TelemetryPayload, WeatherTelemetry, SubjectiveLog } from './types.js';
+import type { BiomeState, ProjectType, UserAction, TelemetryPayload, WeatherTelemetry, SubjectiveLog, Vector3 } from './types.js';
 import { ActionRecognizer } from './recognizer.js';
 
 dotenv.config();
@@ -50,6 +50,59 @@ const state: BiomeState = {
 };
 
 let activeCapture: { id: string, label: string, streams: string[] } | null = null;
+let lookingDownStartTime: number | null = null;
+
+export function calculateNeckAngle(pose: Record<string, Vector3>): number | undefined {
+  const nose = pose.nose;
+  const left_shoulder = pose.left_shoulder;
+  const right_shoulder = pose.right_shoulder;
+  if (!nose || !left_shoulder || !right_shoulder) return undefined;
+
+  const midX = (left_shoulder.x + right_shoulder.x) / 2;
+  const midY = (left_shoulder.y + right_shoulder.y) / 2;
+  const midZ = (left_shoulder.z + right_shoulder.z) / 2;
+
+  const dx = nose.x - midX;
+  const dy = nose.y - midY;
+  const dz = nose.z - midZ;
+
+  // Compute angle of head vector relative to the vertical Y axis (flexion/forward tilt)
+  const angleRad = Math.atan2(Math.sqrt(dx * dx + dz * dz), dy);
+  const angleDeg = Math.round(angleRad * (180 / Math.PI));
+  return angleDeg;
+}
+
+export function processPostureTelemetry(data: any): any {
+  if (data && data.pose) {
+    const neckAngle = calculateNeckAngle(data.pose);
+    if (neckAngle !== undefined) {
+      data.analysis = data.analysis || {};
+      data.analysis.neck_angle = neckAngle;
+      
+      if (neckAngle > 20) {
+        if (lookingDownStartTime === null) {
+          lookingDownStartTime = Date.now();
+          data.analysis.is_looking_down_too_long = false;
+        } else if (Date.now() - lookingDownStartTime > 15000) {
+          data.analysis.is_looking_down_too_long = true;
+          data.analysis.feedback = 'Looking down at bottom monitor too long! Stretch your neck.';
+          console.log('[Intervention] Neck tilt exceeded 15s limit. Sending Haptic Alert to Watch.');
+          io.emit('intervention', {
+            target: 'heart',
+            type: 'HAPTIC_TAP',
+            message: 'Chin up! You have been looking at the bottom monitor too long.'
+          });
+        } else {
+          data.analysis.is_looking_down_too_long = false;
+        }
+      } else {
+        lookingDownStartTime = null;
+        data.analysis.is_looking_down_too_long = false;
+      }
+    }
+  }
+  return data;
+}
 
 /**
  * Fetch Local Weather
@@ -212,6 +265,7 @@ app.post('/api/events/:project', (req: Request, res: Response) => {
   // Update state for event-driven projects
   if (project === 'story') state.story = eventData;
   if (project === 'pills') state.lastPillEvent = eventData;
+  if (project === 'posture') state.posture = processPostureTelemetry(eventData);
   if (project === 'subjective') {
     state.subjective = eventData;
     persistSubjectiveLog(eventData);
@@ -333,10 +387,10 @@ io.on('connection', (socket: Socket) => {
     
     // Update local state
     if (project === 'posture') {
-        state.posture = data;
+        state.posture = processPostureTelemetry(data);
         
         // Feed frame to recognizer
-        const detectedAction = recognizer.processFrame(data);
+        const detectedAction = recognizer.processFrame(state.posture);
         if (detectedAction) {
              const actionEvent: UserAction = {
                 id: Math.random().toString(36).substr(2, 9),
