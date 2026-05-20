@@ -142,6 +142,23 @@ export interface BiomeState {
 
 export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions' | 'environment' | 'chair' | 'desk' | 'weather' | 'baseline' | 'subjective';
 
+export interface ServerConfig {
+  // Posture / Neck
+  neckAngleThreshold: number;       // degrees — above this triggers the "looking down" timer
+  lookingDownTimeLimitMs: number;   // ms — how long before the haptic fires
+  postureScoreBadThreshold: number; // score below this triggers a haptic nudge
+
+  // Stress
+  baseStressThreshold: number;      // default stress index that triggers relaxation nudge (0–1)
+  stressThresholdFloor: number;     // minimum stress threshold after subjective adjustments
+
+  // Environment
+  co2AlertThreshold: number;        // ppm — above this triggers "open a window" warning
+
+  // Weather
+  weatherRefreshIntervalMs: number; // ms — how often to poll Open-Meteo
+}
+
 export type TelemetryPayload = 
   | { project: 'posture'; data: PostureTelemetry }
   | { project: 'heart'; data: HeartBiometrics }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useBiome } from "@/context/BiomeContext";
-import { Activity, Brain, User, BookOpen, AlertCircle, AlertTriangle, Tag, Dumbbell, Cloud, Moon, Smile, Frown } from "lucide-react";
+import { Activity, Brain, User, BookOpen, AlertCircle, AlertTriangle, Tag, Dumbbell, Cloud, Moon, Smile, Frown, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SkeletonView from "@/components/SkeletonView";
 import ActionCapture from "@/components/ActionCapture";
@@ -10,9 +10,10 @@ import Sparkline from "@/components/Sparkline";
 import PulseOrb from "@/components/PulseOrb";
 import NextBestAction from "@/components/NextBestAction";
 import SubjectiveLogForm from "@/components/SubjectiveLogForm";
+import SettingsPanel from "@/components/SettingsPanel";
 import { useIsStale } from "@/hooks/useIsStale";
 
-type Tab = 'vitals' | 'training' | 'narrative';
+type Tab = 'vitals' | 'training' | 'narrative' | 'settings';
 
 export default function Home() {
   const state = useBiome();
@@ -61,6 +62,13 @@ export default function Home() {
         >
           <BookOpen size={16} className={activeTab === 'narrative' ? 'text-emerald-400' : ''} />
           Narrative Sync
+        </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'settings' ? 'bg-zinc-800/80 text-white border-t border-x border-zinc-700/50' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50'}`}
+        >
+          <Settings size={16} className={activeTab === 'settings' ? 'text-indigo-400' : ''} />
+          Settings
         </button>
       </div>
 
@@ -486,6 +494,18 @@ export default function Home() {
                   </div>
                 )}
               </section>
+            </motion.div>
+          )}
+          {activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="max-w-3xl"
+            >
+              <SettingsPanel />
             </motion.div>
           )}
         </AnimatePresence>

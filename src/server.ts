@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import type { BiomeState, ProjectType, UserAction, TelemetryPayload, WeatherTelemetry, SubjectiveLog, Vector3 } from './types.js';
 import { ActionRecognizer } from './recognizer.js';
+import { config, registerSettingsRoutes } from './config.js';
 
 dotenv.config();
 
@@ -79,14 +80,14 @@ export function processPostureTelemetry(data: any): any {
       data.analysis = data.analysis || {};
       data.analysis.neck_angle = neckAngle;
       
-      if (neckAngle > 20) {
+      if (neckAngle > config.neckAngleThreshold) {
         if (lookingDownStartTime === null) {
           lookingDownStartTime = Date.now();
           data.analysis.is_looking_down_too_long = false;
-        } else if (Date.now() - lookingDownStartTime > 15000) {
+        } else if (Date.now() - lookingDownStartTime > config.lookingDownTimeLimitMs) {
           data.analysis.is_looking_down_too_long = true;
           data.analysis.feedback = 'Looking down at bottom monitor too long! Stretch your neck.';
-          console.log('[Intervention] Neck tilt exceeded 15s limit. Sending Haptic Alert to Watch.');
+          console.log(`[Intervention] Neck tilt exceeded ${config.lookingDownTimeLimitMs / 1000}s limit. Sending Haptic Alert to Watch.`);
           io.emit('intervention', {
             target: 'heart',
             type: 'HAPTIC_TAP',
@@ -131,9 +132,9 @@ async function fetchLocalWeather() {
   }
 }
 
-// Initial fetch and interval (every 15 mins)
+// Initial fetch and interval (controlled by config)
 fetchLocalWeather();
-setInterval(fetchLocalWeather, 15 * 60 * 1000);
+setInterval(fetchLocalWeather, config.weatherRefreshIntervalMs);
 
 
 /**
@@ -190,7 +191,7 @@ function persistTelemetrySample(actionId: string, label: string, project: string
  */
 function runInterventions() {
   // Determine stress threshold based on daily readiness baseline
-  let baseStressThreshold = 0.8;
+  let baseStressThreshold = config.baseStressThreshold;
   if (state.baseline) {
     if (state.baseline.readiness_score < 60) baseStressThreshold -= 0.1;
     if (state.baseline.muse_calibration_completed && state.baseline.muse_baseline_stress) {
@@ -218,7 +219,7 @@ function runInterventions() {
       baseStressThreshold -= 0.05;
     }
   }
-  baseStressThreshold = Math.max(0.4, baseStressThreshold); // Ensure we don't go below 0.4
+  baseStressThreshold = Math.max(config.stressThresholdFloor, baseStressThreshold);
 
   // 1. Stress -> Story Relaxation Nudge
   if (state.muse && state.muse.stress_index > baseStressThreshold) {
@@ -231,7 +232,7 @@ function runInterventions() {
   }
 
   // 2. Posture -> Haptic Alert
-  if (state.posture && state.posture.analysis.score < 40) { // Using a score threshold (adjusted for logic)
+  if (state.posture && state.posture.analysis.score < config.postureScoreBadThreshold) {
      console.log('[Intervention] Bad Posture detected. Sending Haptic Alert to Watch.');
      io.emit('intervention', {
        target: 'heart',
@@ -241,7 +242,7 @@ function runInterventions() {
   }
 
   // 3. Environment -> Open Window
-  if (state.environment && state.environment.co2 > 1000) {
+  if (state.environment && state.environment.co2 > config.co2AlertThreshold) {
     console.log('[Intervention] High CO2 detected. Sending Alert.');
     io.emit('intervention', {
       target: 'dashboard',
@@ -250,6 +251,9 @@ function runInterventions() {
     });
   }
 }
+
+// Settings endpoints
+registerSettingsRoutes(app, io);
 
 // REST Endpoints for low-frequency data
 app.post('/api/events/:project', (req: Request, res: Response) => {
