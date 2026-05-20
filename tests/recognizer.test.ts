@@ -82,8 +82,8 @@ describe('ActionRecognizer', () => {
     
     recognizer.loadTemplates();
     expect(recognizer.templates.length).toBe(1);
-    expect(recognizer.templates[0].label).toBe('Wave');
-    expect(recognizer.templates[0].features.length).toBe(10);
+    expect(recognizer.templates[0]!.label).toBe('Wave');
+    expect(recognizer.templates[0]!.features.length).toBe(10);
   });
 
   it('should detect an action when buffer matches a template', () => {
@@ -105,7 +105,7 @@ describe('ActionRecognizer', () => {
                 right_elbow: { x: 1, y: 0, z: 0 },
                 left_elbow: { x: -1, y: 0, z: 0 },
             },
-            analysis: { score: 100, slouch_detected: false }
+            analysis: { score: 100 }
         });
         expect(result).toBeNull();
     }
@@ -120,7 +120,7 @@ describe('ActionRecognizer', () => {
             right_elbow: { x: 1, y: 0, z: 0 },
             left_elbow: { x: -1, y: 0, z: 0 },
         },
-        analysis: { score: 100, slouch_detected: false }
+        analysis: { score: 100 }
     });
     expect(result).toBe('Test Action');
   });
@@ -143,7 +143,7 @@ describe('ActionRecognizer', () => {
                 right_elbow: { x: 1, y: 0, z: 0 },
                 left_elbow: { x: -1, y: 0, z: 0 },
             },
-            analysis: { score: 100, slouch_detected: false }
+            analysis: { score: 100 }
         });
     }
 
@@ -157,9 +157,39 @@ describe('ActionRecognizer', () => {
             right_elbow: { x: 1, y: 0, z: 0 },
             left_elbow: { x: -1, y: 0, z: 0 },
         },
-        analysis: { score: 100, slouch_detected: false }
+        analysis: { score: 100 }
     });
     expect(result).toBeNull();
     expect(recognizer.cooldown).toBeGreaterThan(0);
+  });
+
+  it('should cap the buffer at MAX_BUFFER_SIZE frames', () => {
+    const frame = {
+        timestamp: '',
+        pose: {
+            nose: { x: 0, y: 0, z: 0 },
+            right_shoulder: { x: 1, y: 0, z: 0 },
+            left_shoulder: { x: -1, y: 0, z: 0 },
+            right_elbow: { x: 1, y: 0, z: 0 },
+            left_elbow: { x: -1, y: 0, z: 0 },
+        },
+        analysis: { score: 100 }
+    };
+
+    const overLimit = recognizer.MAX_BUFFER_SIZE + 10;
+    for (let i = 0; i < overLimit; i++) {
+        recognizer.processFrame(frame);
+    }
+
+    expect(recognizer.buffer.length).toBe(recognizer.MAX_BUFFER_SIZE);
+  });
+
+  it('should return null when pose is missing from telemetry', () => {
+    const result = recognizer.processFrame({
+        timestamp: '',
+        pose: undefined as any,
+        analysis: { score: 100 }
+    });
+    expect(result).toBeNull();
   });
 });

@@ -270,6 +270,12 @@ app.post('/api/events/:project', (req: Request, res: Response) => {
   if (project === 'story') state.story = eventData;
   if (project === 'pills') state.lastPillEvent = eventData;
   if (project === 'posture') state.posture = processPostureTelemetry(eventData);
+  if (project === 'environment') state.environment = eventData;
+  if (project === 'chair') state.chair = eventData;
+  if (project === 'desk') state.desk = eventData;
+  if (project === 'baseline') state.baseline = eventData;
+  if (project === 'muse') state.muse = eventData;
+  if (project === 'heart') state.heart = eventData;
   if (project === 'subjective') {
     state.subjective = eventData;
     persistSubjectiveLog(eventData);
@@ -394,7 +400,7 @@ io.on('connection', (socket: Socket) => {
         state.posture = processPostureTelemetry(data);
         
         // Feed frame to recognizer
-        const detectedAction = recognizer.processFrame(state.posture);
+        const detectedAction = recognizer.processFrame(state.posture!);
         if (detectedAction) {
              const actionEvent: UserAction = {
                 id: Math.random().toString(36).substr(2, 9),
