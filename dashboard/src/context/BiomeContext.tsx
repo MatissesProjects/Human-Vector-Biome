@@ -2,7 +2,7 @@
 
 import { useEffect, useState, createContext, useContext } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { BiomeState, TelemetryPayload, HeartBiometrics, MuseBrainwaves } from '../../../src/types';
+import { BiomeState, TelemetryPayload, HeartBiometrics, MuseBrainwaves, SubjectiveLog } from '../../../src/types';
 import { toast } from 'sonner';
 
 export type DashboardState = BiomeState & {
@@ -27,6 +27,7 @@ export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
     desk: null,
     weather: null,
     baseline: null,
+    subjective: null,
     history: {
       heartRate: [],
       stressIndex: []
@@ -79,6 +80,10 @@ export const BiomeProvider = ({ children }: { children: React.ReactNode }) => {
         }
         if (payload.project === 'baseline') {
             setState(prev => ({ ...prev, baseline: payload }));
+        }
+        if (payload.project === 'subjective') {
+            const { project, ...data } = payload;
+            setState(prev => ({ ...prev, subjective: data as SubjectiveLog }));
         }
         if (payload.project === 'actions') {
             setState(prev => ({

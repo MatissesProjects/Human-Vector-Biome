@@ -151,8 +151,12 @@ function runInterventions() {
     if (!state.subjective.woke_up_feeling_alright) {
       baseStressThreshold -= 0.05;
     }
-    if (state.subjective.pain !== 'none') {
+    if (state.subjective.pain === 'mild') {
+      baseStressThreshold -= 0.02;
+    } else if (state.subjective.pain === 'moderate') {
       baseStressThreshold -= 0.05;
+    } else if (state.subjective.pain === 'severe') {
+      baseStressThreshold -= 0.15;
     }
     if (state.subjective.vomit) {
       baseStressThreshold -= 0.1;

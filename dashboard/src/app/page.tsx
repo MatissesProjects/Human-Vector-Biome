@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useBiome } from "@/context/BiomeContext";
-import { Activity, Brain, User, BookOpen, AlertCircle, Tag, Dumbbell, Cloud, Moon } from "lucide-react";
+import { Activity, Brain, User, BookOpen, AlertCircle, Tag, Dumbbell, Cloud, Moon, Smile, Frown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SkeletonView from "@/components/SkeletonView";
 import ActionCapture from "@/components/ActionCapture";
 import Sparkline from "@/components/Sparkline";
 import PulseOrb from "@/components/PulseOrb";
 import NextBestAction from "@/components/NextBestAction";
+import SubjectiveLogForm from "@/components/SubjectiveLogForm";
 import { useIsStale } from "@/hooks/useIsStale";
 
 type Tab = 'vitals' | 'training' | 'narrative';
@@ -17,6 +18,7 @@ export default function Home() {
   const state = useBiome();
   const isMuseStale = useIsStale(state?.muse?.timestamp);
   const [activeTab, setActiveTab] = useState<Tab>('vitals');
+  const [forceShowForm, setForceShowForm] = useState(false);
 
   if (!state) return <div className="min-h-screen flex items-center justify-center text-zinc-500">Initializing Biome Hub...</div>;
 
@@ -31,7 +33,11 @@ export default function Home() {
         </div>
       </header>
 
-      <NextBestAction stressIndex={isMuseStale ? null : state.muse?.stress_index} />
+      <NextBestAction 
+        stressIndex={isMuseStale ? null : state.muse?.stress_index} 
+        subjective={state.subjective}
+        baseline={state.baseline}
+      />
 
       {/* Tabs */}
       <div className="flex space-x-2 border-b border-zinc-800 pb-px overflow-x-auto scrollbar-hide">
@@ -241,6 +247,100 @@ export default function Home() {
                         <p className="text-xs font-bold text-yellow-500 text-center uppercase tracking-wider animate-pulse pt-2">Needs Calibration</p>
                       )}
                     </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Subjective Log Form or Summary */}
+              {(!state.subjective || forceShowForm) ? (
+                <section className="col-span-1 md:col-span-2 lg:col-span-3">
+                  <SubjectiveLogForm />
+                  {state.subjective && (
+                    <button
+                      onClick={() => setForceShowForm(false)}
+                      className="mt-3 text-xs text-zinc-500 hover:text-zinc-300 underline font-medium block mx-auto transition-colors"
+                    >
+                      Cancel and show logged metrics
+                    </button>
+                  )}
+                </section>
+              ) : (
+                <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex flex-col col-span-1 md:col-span-2 lg:col-span-3 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                        {state.subjective.woke_up_feeling_alright ? (
+                          <Smile className="text-green-400" size={18} />
+                        ) : (
+                          <Frown className="text-orange-400" size={18} />
+                        )}
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold tracking-tight text-white">Morning Subjective Baseline</h2>
+                        <p className="text-xs text-zinc-500">Logged at {new Date(state.subjective.timestamp).toLocaleTimeString()}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setForceShowForm(true)}
+                      className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-xs font-semibold transition-all border border-zinc-700/50"
+                    >
+                      Re-log Baseline
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+                    <div className="bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30 flex flex-col justify-center items-center text-center">
+                      <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Morning Wellness</p>
+                      <span className={`text-base font-bold flex items-center gap-1.5 ${state.subjective.woke_up_feeling_alright ? 'text-green-400' : 'text-orange-400'}`}>
+                        {state.subjective.woke_up_feeling_alright ? 'Alright' : 'Unwell'}
+                      </span>
+                    </div>
+
+                    <div className="bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30 flex flex-col justify-center items-center text-center">
+                      <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Night Wakeups</p>
+                      <span className="text-base font-bold text-white flex items-center gap-1.5">
+                        <Moon size={16} className="text-purple-400 font-bold" />
+                        {state.subjective.wakeups_during_night} {state.subjective.wakeups_during_night === 1 ? 'disruption' : 'disruptions'}
+                      </span>
+                    </div>
+
+                    <div className="bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30 flex flex-col justify-center items-center text-center">
+                      <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Pain Severity</p>
+                      <span className={`text-base font-bold capitalize flex items-center gap-1.5 ${
+                        state.subjective.pain === 'none' ? 'text-zinc-400' : 
+                        state.subjective.pain === 'mild' ? 'text-yellow-400' : 
+                        state.subjective.pain === 'moderate' ? 'text-orange-400' : 'text-red-400'
+                      }`}>
+                        <AlertCircle size={16} />
+                        {state.subjective.pain}
+                        {state.subjective.pain_location && <span className="text-xs text-zinc-500">({state.subjective.pain_location})</span>}
+                      </span>
+                    </div>
+
+                    <div className="bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30 flex flex-col justify-center items-center text-center">
+                      <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Nausea / Vomit</p>
+                      <span className={`text-base font-bold flex items-center gap-1.5 ${state.subjective.vomit ? 'text-red-400' : 'text-green-400'}`}>
+                        {state.subjective.vomit ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+
+                    <div className="bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30 flex flex-col justify-center items-center text-center col-span-2">
+                      <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Bowel Status</p>
+                      <span className="text-sm font-semibold capitalize text-zinc-200">{state.subjective.bowel}</span>
+                    </div>
+
+                    <div className="bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30 flex flex-col justify-center items-center text-center col-span-2">
+                      <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Urine Status</p>
+                      <span className="text-sm font-semibold capitalize text-zinc-200">{state.subjective.urine}</span>
+                    </div>
+
+                    {state.subjective.notes && (
+                      <div className="col-span-full bg-zinc-800/10 border border-zinc-800/30 p-3 rounded-lg text-xs text-zinc-400 mt-2">
+                        <span className="font-bold text-zinc-500 block mb-1">LOG NOTES</span>
+                        "{state.subjective.notes}"
+                      </div>
+                    )}
                   </div>
                 </section>
               )}

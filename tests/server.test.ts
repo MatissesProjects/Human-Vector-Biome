@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
-import { app, state } from '../src/server.js';
+import { app, state, io } from '../src/server.js';
 import fs from 'fs';
 
 vi.mock('fs', async (importOriginal) => {
@@ -112,6 +112,51 @@ describe('Server REST API', () => {
       }
       expect(state.actions.length).toBe(50); // Buffer limit is 50
       expect(state.actions[49].label).toBe('Action 59');
+    });
+  });
+
+  describe('Intervention Logic and Subjective Logs', () => {
+    it('should lower stress threshold and trigger intervention when subjective health is bad', async () => {
+      // 1. Set stress index to 0.7 (below default 0.8 threshold)
+      state.muse = { timestamp: new Date().toISOString(), stress_index: 0.7 };
+      
+      const spyEmit = vi.spyOn(io, 'emit');
+
+      // Send telemetry/run interventions, should not trigger intervention
+      await request(app)
+        .post('/api/events/muse')
+        .send(state.muse);
+
+      expect(spyEmit).not.toHaveBeenCalledWith('intervention', expect.any(Object));
+
+      // 2. Post a subjective log with severe pain (should reduce threshold to 0.6)
+      const subjectiveLog = {
+        timestamp: new Date().toISOString(),
+        woke_up_feeling_alright: true,
+        wakeups_during_night: 0,
+        pain: 'severe',
+        vomit: false,
+        bowel: 'normal',
+        urine: 'normal'
+      };
+
+      await request(app)
+        .post('/api/events/subjective')
+        .send(subjectiveLog);
+
+      // Now with stress at 0.7, it is above the new threshold of 0.6.
+      // Send muse event again to run interventions
+      await request(app)
+        .post('/api/events/muse')
+        .send(state.muse);
+
+      // It should have triggered a RELAXATION_SUGGESTION
+      expect(spyEmit).toHaveBeenCalledWith('intervention', expect.objectContaining({
+        type: 'RELAXATION_SUGGESTION',
+        target: 'story'
+      }));
+
+      spyEmit.mockRestore();
     });
   });
 });
