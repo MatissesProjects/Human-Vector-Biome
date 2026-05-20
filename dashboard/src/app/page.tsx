@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useBiome } from "@/context/BiomeContext";
-import { Activity, Brain, User, BookOpen, AlertCircle, Tag, Dumbbell, Cloud, Moon, Smile, Frown } from "lucide-react";
+import { Activity, Brain, User, BookOpen, AlertCircle, AlertTriangle, Tag, Dumbbell, Cloud, Moon, Smile, Frown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SkeletonView from "@/components/SkeletonView";
 import ActionCapture from "@/components/ActionCapture";
@@ -335,6 +335,24 @@ export default function Home() {
                       <span className="text-sm font-semibold capitalize text-zinc-200">{state.subjective.urine}</span>
                     </div>
 
+                    {state.subjective.feeling_duration && (
+                      <div className="bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30 flex flex-col justify-center items-center text-center col-span-2">
+                        <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Feeling Duration</p>
+                        <span className="text-sm font-semibold capitalize text-indigo-400">
+                          {state.subjective.feeling_duration === 'quick' ? 'Resolved quickly (<30m)' :
+                           state.subjective.feeling_duration === 'few_hours' ? 'A few hours (1-2h)' :
+                           state.subjective.feeling_duration === 'half_day' ? 'Half day' : 'All day'}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className={`bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30 flex flex-col justify-center items-center text-center ${state.subjective.feeling_duration ? 'col-span-2' : 'col-span-4'}`}>
+                      <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Psyllium Husk</p>
+                      <span className={`text-sm font-bold flex items-center gap-1.5 ${state.subjective.took_psyllium_husk ? 'text-amber-400' : 'text-zinc-500'}`}>
+                        {state.subjective.took_psyllium_husk ? '🌾 Yes (Schedule Shifted +2h)' : 'No'}
+                      </span>
+                    </div>
+
                     {state.subjective.notes && (
                       <div className="col-span-full bg-zinc-800/10 border border-zinc-800/30 p-3 rounded-lg text-xs text-zinc-400 mt-2">
                         <span className="font-bold text-zinc-500 block mb-1">LOG NOTES</span>
@@ -377,6 +395,18 @@ export default function Home() {
                       <span className="text-[10px] text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded">{new Date(action.timestamp).toLocaleTimeString()}</span>
                     </div>
                   ))}
+                  {state.subjective?.took_psyllium_husk && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg flex flex-col gap-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-amber-400 text-xs uppercase tracking-wider flex items-center gap-1">
+                          <AlertTriangle size={12} /> Schedule Shifted
+                        </span>
+                        <span className="text-[10px] text-zinc-400 font-mono bg-black/30 px-2 py-1 rounded">Shifted +2h</span>
+                      </div>
+                      <span className="text-sm font-semibold text-zinc-200">Psyllium Husk Interaction Active</span>
+                      <span className="text-xs text-zinc-400 font-medium">Scheduled pills delayed by 2 hours to avoid binding conflicts.</span>
+                    </div>
+                  )}
                   {state.lastPillEvent && (
                     <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-lg flex flex-col gap-1">
                       <div className="flex justify-between items-center">

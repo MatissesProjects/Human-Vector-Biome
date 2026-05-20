@@ -118,6 +118,8 @@ export interface SubjectiveLog {
   vomit: boolean;
   bowel: 'normal' | 'constipated' | 'diarrhea' | 'none' | 'other';
   urine: 'normal' | 'dark' | 'frequent' | 'burning' | 'none' | 'other';
+  feeling_duration?: 'quick' | 'few_hours' | 'half_day' | 'all_day';
+  took_psyllium_husk?: boolean;
   notes?: string;
 }
 

@@ -17,6 +17,8 @@ export default function SubjectiveLogForm() {
   const [vomit, setVomit] = useState<boolean>(false);
   const [bowel, setBowel] = useState<SubjectiveLog["bowel"]>("normal");
   const [urine, setUrine] = useState<SubjectiveLog["urine"]>("normal");
+  const [feelingDuration, setFeelingDuration] = useState<SubjectiveLog["feeling_duration"]>("quick");
+  const [tookPsylliumHusk, setTookPsylliumHusk] = useState<boolean>(false);
   const [notes, setNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -33,6 +35,8 @@ export default function SubjectiveLogForm() {
       vomit,
       bowel,
       urine,
+      feeling_duration: (!wokeUpFeelingAlright || pain !== "none" || vomit) ? feelingDuration : undefined,
+      took_psyllium_husk: tookPsylliumHusk,
       notes: notes.trim() ? notes : undefined,
     };
 
@@ -122,6 +126,44 @@ export default function SubjectiveLogForm() {
             </button>
           </div>
         </div>
+
+        {/* Feeling Duration selector (only visible if any wellness issue reported) */}
+        <AnimatePresence>
+          {(!wokeUpFeelingAlright || pain !== "none" || vomit) && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30 space-y-3 overflow-hidden"
+            >
+              <div className="flex items-center gap-2">
+                <Info className="text-indigo-400" size={18} />
+                <p className="text-sm font-semibold text-zinc-200">How long did that morning feeling last?</p>
+              </div>
+              <div className="grid grid-cols-4 gap-1 bg-zinc-800 p-1 border border-zinc-700 rounded-lg">
+                {([
+                  { value: "quick", label: "< 30m" },
+                  { value: "few_hours", label: "1-2 hrs" },
+                  { value: "half_day", label: "Half Day" },
+                  { value: "all_day", label: "All Day" }
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFeelingDuration(opt.value)}
+                    className={`py-1.5 text-center text-xs font-semibold rounded transition-all ${
+                      feelingDuration === opt.value
+                        ? "bg-indigo-600 text-white"
+                        : "text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Wakeups During Night */}
         <div className="flex items-center justify-between bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30">
@@ -277,6 +319,27 @@ export default function SubjectiveLogForm() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Took Psyllium Husk Toggle */}
+        <div className="bg-zinc-800/20 p-4 rounded-xl border border-zinc-800/30 flex items-center justify-between">
+          <div className="space-y-1 pr-4">
+            <p className="text-sm font-semibold text-zinc-200">Took Psyllium Husk?</p>
+            <p className="text-xs text-zinc-500">Delays scheduled pill intakes by 2 hours to prevent absorption interference</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTookPsylliumHusk(!tookPsylliumHusk)}
+            className={`w-12 h-6 rounded-full p-1 transition-colors shrink-0 ${
+              tookPsylliumHusk ? "bg-amber-600" : "bg-zinc-800 border border-zinc-700"
+            }`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                tookPsylliumHusk ? "translate-x-6" : "translate-x-0"
+              }`}
+            />
+          </button>
         </div>
 
         {/* General Notes */}

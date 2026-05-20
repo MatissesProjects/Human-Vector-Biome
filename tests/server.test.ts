@@ -73,7 +73,9 @@ describe('Server REST API', () => {
         pain: 'none',
         vomit: false,
         bowel: 'normal',
-        urine: 'normal'
+        urine: 'normal',
+        feeling_duration: 'quick',
+        took_psyllium_husk: true
       };
       const response = await request(app)
         .post('/api/events/subjective')

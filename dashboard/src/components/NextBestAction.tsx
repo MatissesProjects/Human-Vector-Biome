@@ -19,9 +19,20 @@ export default function NextBestAction({ stressIndex, subjective, baseline }: Ne
   const [dismissedActions, setDismissedActions] = useState<string[]>([]);
   const isStressed = stressIndex && stressIndex > 0.8;
 
+  const getDurationText = () => {
+    if (!subjective || !subjective.feeling_duration) return "";
+    const durationLabels = {
+      quick: "resolved quickly (<30m)",
+      few_hours: "lasted a few hours (1-2h)",
+      half_day: "lasted half the day",
+      all_day: "persisted all day"
+    };
+    return ` (symptoms ${durationLabels[subjective.feeling_duration]})`;
+  };
+
   const actions: {
     id: string;
-    type: "stress" | "pain" | "illness" | "sleep";
+    type: "stress" | "pain" | "illness" | "sleep" | "pill_delay";
     title: string;
     description: string;
     icon: React.ReactNode;
@@ -57,7 +68,7 @@ export default function NextBestAction({ stressIndex, subjective, baseline }: Ne
       id: "pain",
       type: "pain",
       title: `Physical Pain Management (${subjective.pain} severity)`,
-      description: `You reported ${subjective.pain} pain${subjective.pain_location ? ` in the ${subjective.pain_location}` : ""}. Rest and dynamic stretching are recommended.`,
+      description: `You reported ${subjective.pain} pain${subjective.pain_location ? ` in the ${subjective.pain_location}` : ""}${getDurationText()}. Rest and dynamic stretching are recommended.`,
       icon: <AlertCircle className="text-orange-400" size={24} />,
       colorClass: "from-orange-950/40 to-yellow-950/40",
       borderColorClass: "border-orange-500/30",
@@ -77,7 +88,7 @@ export default function NextBestAction({ stressIndex, subjective, baseline }: Ne
       id: "illness",
       type: "illness",
       title: "Dehydration & Nausea Warning",
-      description: "Vomiting causes acute fluid and electrolyte loss. Prioritize fluid intake and avoid caffeine.",
+      description: `Vomiting/nausea occurred${getDurationText()}, causing acute fluid and electrolyte loss. Prioritize fluid intake and avoid caffeine.`,
       icon: <GlassWater className="text-red-400" size={24} />,
       colorClass: "from-red-950/40 to-rose-950/40",
       borderColorClass: "border-red-500/30",
@@ -104,7 +115,7 @@ export default function NextBestAction({ stressIndex, subjective, baseline }: Ne
       id: "sleep",
       type: "sleep",
       title: "Reduced Readiness Baseline",
-      description: `${reason}. We recommend scheduling regular screen breaks and keeping cognitive loads light today.`,
+      description: `${reason}${getDurationText()}. We recommend scheduling regular screen breaks and keeping cognitive loads light today.`,
       icon: <Moon className="text-blue-400" size={24} />,
       colorClass: "from-blue-950/40 to-cyan-950/40",
       borderColorClass: "border-blue-500/30",
@@ -112,6 +123,25 @@ export default function NextBestAction({ stressIndex, subjective, baseline }: Ne
       buttonAction: () => {
         toast.success("Focus Breaks Scheduled", {
           description: "The dashboard will nudge you every 25 minutes for physical movement.",
+        });
+      }
+    });
+  }
+
+  // 5. Psyllium Husk delay Action
+  if (subjective && subjective.took_psyllium_husk) {
+    actions.push({
+      id: "psyllium_husk",
+      type: "pill_delay",
+      title: "Medication Shift: Psyllium Husk Taken",
+      description: "To prevent medication absorption and binding interference, please push back scheduled routine pill intakes by 2 hours.",
+      icon: <Coffee className="text-amber-400" size={24} />,
+      colorClass: "from-amber-950/40 to-yellow-950/40",
+      borderColorClass: "border-amber-500/30",
+      buttonText: "Acknowledge Shift (+2h)",
+      buttonAction: () => {
+        toast.success("Schedule Shift Confirmed", {
+          description: "Pill reminder schedules shifted by 2 hours.",
         });
       }
     });
