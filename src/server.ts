@@ -229,7 +229,37 @@ app.post('/api/actions', (req: Request, res: Response) => {
   res.status(200).json({ status: 'success', action });
 });
 
-// WebSocket connection for high-frequency data
+function detectWalkingBreak(prevMotion: string | undefined, newMotion: string) {
+    if (prevMotion === 'STATIONARY' && newMotion === 'WALKING') {
+        console.log('[Auto-Capture] Detected Walking Break started.');
+        const actionEvent: UserAction = {
+           id: Math.random().toString(36).substr(2, 9),
+           timestamp: new Date().toISOString(),
+           label: 'Walking Break',
+           type: 'START',
+           metadata: { source: 'MOTION_SENSOR' }
+        };
+        state.actions.push(actionEvent);
+        if (state.actions.length > 50) state.actions.shift();
+        io.emit('project_event', { project: 'actions', data: actionEvent });
+    } else if (prevMotion === 'WALKING' && newMotion === 'STATIONARY') {
+        console.log('[Auto-Capture] Detected Walking Break ended.');
+        const actionEvent: UserAction = {
+           id: Math.random().toString(36).substr(2, 9),
+           timestamp: new Date().toISOString(),
+           label: 'Walking Break',
+           type: 'STOP',
+           metadata: { source: 'MOTION_SENSOR' }
+        };
+        state.actions.push(actionEvent);
+        if (state.actions.length > 50) state.actions.shift();
+        io.emit('project_event', { project: 'actions', data: actionEvent });
+    }
+}
+
+/**
+ * WebSocket connection for high-frequency data
+ */
 io.on('connection', (socket: Socket) => {
   console.log('Client connected:', socket.id);
 
@@ -239,7 +269,6 @@ io.on('connection', (socket: Socket) => {
     // Update local state
     if (project === 'posture') {
         state.posture = data;
-
         
         // Feed frame to recognizer
         const detectedAction = recognizer.processFrame(data);
@@ -263,31 +292,7 @@ io.on('connection', (socket: Socket) => {
         state.heart = data;
 
         // Auto-detect Walking Breaks
-        if (prevMotion === 'STATIONARY' && newMotion === 'WALKING') {
-            console.log('[Auto-Capture] Detected Walking Break started.');
-            const actionEvent: UserAction = {
-               id: Math.random().toString(36).substr(2, 9),
-               timestamp: new Date().toISOString(),
-               label: 'Walking Break',
-               type: 'START',
-               metadata: { source: 'MOTION_SENSOR' }
-            };
-            state.actions.push(actionEvent);
-            if (state.actions.length > 50) state.actions.shift();
-            io.emit('project_event', { project: 'actions', data: actionEvent });
-        } else if (prevMotion === 'WALKING' && newMotion === 'STATIONARY') {
-            console.log('[Auto-Capture] Detected Walking Break ended.');
-            const actionEvent: UserAction = {
-               id: Math.random().toString(36).substr(2, 9),
-               timestamp: new Date().toISOString(),
-               label: 'Walking Break',
-               type: 'STOP',
-               metadata: { source: 'MOTION_SENSOR' }
-            };
-            state.actions.push(actionEvent);
-            if (state.actions.length > 50) state.actions.shift();
-            io.emit('project_event', { project: 'actions', data: actionEvent });
-        }
+        detectWalkingBreak(prevMotion, newMotion);
     }
     if (project === 'muse') state.muse = data;
     if (project === 'story') state.story = data;
