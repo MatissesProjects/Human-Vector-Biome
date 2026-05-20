@@ -46,6 +46,15 @@ describe('Server REST API', () => {
       expect(state.story).toEqual(eventData);
     });
 
+    it('should return 400 for empty event data', async () => {
+      const response = await request(app)
+        .post('/api/events/story')
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.status).toBe('error');
+    });
+
     it('should update state and return success for pills events', async () => {
       const eventData = { pill: 'Vitamin C', taken: true };
       const response = await request(app)
@@ -58,6 +67,13 @@ describe('Server REST API', () => {
   });
 
   describe('POST /api/actions', () => {
+    it('should return 400 for missing label or type', async () => {
+      const response = await request(app)
+        .post('/api/actions')
+        .send({ label: 'Missing Type' });
+
+      expect(response.status).toBe(400);
+    });
     it('should start an action capture', async () => {
       const actionData = { label: 'Drinking Water', type: 'START', streams: ['posture'] };
       const response = await request(app)

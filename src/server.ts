@@ -56,8 +56,8 @@ let activeCapture: { id: string, label: string, streams: string[] } | null = nul
 async function fetchLocalWeather() {
   try {
     // Example using Open-Meteo (no API key required) for a default location (e.g. SF or local)
-    const lat = 37.7749;
-    const lon = -122.4194;
+    const lat = process.env.WEATHER_LAT || 37.7749;
+    const lon = process.env.WEATHER_LON || -122.4194;
     const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
     const data: any = await res.json();
     
@@ -96,8 +96,12 @@ function persistAction(action: UserAction) {
         muse: state.muse
     }
   };
-  fs.appendFileSync(filePath, JSON.stringify(entry) + '\n');
-  console.log(`[Persistence] Logged action: ${action.label} (${action.type})`);
+  try {
+    fs.appendFileSync(filePath, JSON.stringify(entry) + '\n');
+    console.log(`[Persistence] Logged action: ${action.label} (${action.type})`);
+  } catch (err) {
+    console.error(`[Persistence] Failed to log action to ${filePath}:`, err);
+  }
 }
 
 function persistTelemetrySample(actionId: string, label: string, project: string, data: unknown) {
@@ -109,7 +113,11 @@ function persistTelemetrySample(actionId: string, label: string, project: string
     timestamp: new Date().toISOString(),
     data
   };
-  fs.appendFileSync(filePath, JSON.stringify(entry) + '\n');
+  try {
+    fs.appendFileSync(filePath, JSON.stringify(entry) + '\n');
+  } catch (err) {
+    console.error(`[Persistence] Failed to log telemetry sample to ${filePath}:`, err);
+  }
 }
 
 /**
@@ -163,6 +171,10 @@ app.post('/api/events/:project', (req: Request, res: Response) => {
   const { project } = req.params as { project: ProjectType };
   const eventData = req.body;
   
+  if (!eventData || Object.keys(eventData).length === 0) {
+    return res.status(400).json({ status: 'error', message: 'Empty event data' });
+  }
+  
   console.log(`[REST] Received event from ${project}:`, eventData);
   
   // Update state for event-driven projects
@@ -184,6 +196,10 @@ app.post('/api/events/:project', (req: Request, res: Response) => {
  */
 app.post('/api/actions', (req: Request, res: Response) => {
   const { label, type, streams = ['posture'] } = req.body;
+
+  if (!label || !type) {
+    return res.status(400).json({ status: 'error', message: 'Label and type are required' });
+  }
   const id = Math.random().toString(36).substr(2, 9);
   
   const action: UserAction = {
