@@ -215,6 +215,35 @@ app.post('/api/events/:project', (req: Request, res: Response) => {
   if (project === 'subjective') {
     state.subjective = eventData;
     persistSubjectiveLog(eventData);
+
+    if (eventData.took_psyllium_husk) {
+      console.log('[Pill Scheduler] Psyllium Husk interaction: triggering schedule shift (+2h)');
+      
+      // Emit websocket event to any active clients (e.g. WearOS scheduler/Pixel Watch hub)
+      io.emit('pill_scheduler_shift', {
+        timestamp: new Date().toISOString(),
+        shift_hours: 2,
+        reason: 'Psyllium Husk taken'
+      });
+
+      const pillSchedulerUrl = process.env.PILL_SCHEDULER_URL || 'http://localhost:3005';
+      fetch(`${pillSchedulerUrl}/api/schedule/shift`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shift_hours: 2,
+          reason: 'Psyllium Husk taken - delay pills to avoid absorption interference'
+        })
+      }).then((res) => {
+        if (res.ok) {
+          console.log('[Pill Scheduler] Shift signal successfully sent via Webhook');
+        } else {
+          console.warn(`[Pill Scheduler] Webhook responded with status: ${res.status}`);
+        }
+      }).catch((err) => {
+        console.log(`[Pill Scheduler] Webhook shift skipped (scheduler at ${pillSchedulerUrl} not reachable)`);
+      });
+    }
   }
 
   // Broadcast to all dashboard clients

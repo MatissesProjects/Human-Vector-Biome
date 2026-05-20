@@ -14,3 +14,6 @@
 - [ ] Update frontend Types and state management in `dashboard/src/context/BiomeContext.tsx`.
 - [ ] Create a premium `SubjectiveLogForm` component in the dashboard to capture user reports with a glassmorphic interface.
 - [ ] Embed the form and latest status display within the dashboard workspace.
+
+### Phase 4: Pill Scheduler Integration
+- [ ] Send schedule shift signals (+2h) via Socket.io and webhook POST to Dynamic Pill Scheduler when Psyllium Husk is taken.

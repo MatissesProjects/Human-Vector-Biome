@@ -23,6 +23,8 @@ export interface SubjectiveLog {
   vomit: boolean;
   bowel: 'normal' | 'constipated' | 'diarrhea' | 'none' | 'other';
   urine: 'normal' | 'dark' | 'frequent' | 'burning' | 'none' | 'other';
+  feeling_duration?: 'quick' | 'few_hours' | 'half_day' | 'all_day';
+  took_psyllium_husk?: boolean;
   notes?: string;
 }
 ```
@@ -30,6 +32,7 @@ export interface SubjectiveLog {
 ### API Endpoints
 * **POST `/api/events/subjective`**: Submits a new subjective log via REST.
 * **WebSocket `telemetry` (project: `'subjective'`)**: Emits live updates across client instances.
+* **Outbound Webhook / WebSocket Broadcast**: When `took_psyllium_husk` is `true`, the hub emits a `pill_scheduler_shift` event to WebSocket clients and POSTs a webhook shift signal to the Dynamic Pill Scheduler endpoint (default: `http://localhost:3005/api/schedule/shift`).
 
 ### Persistence
 * Subjective logs are appended to `logs/subjective.jsonl` as JSON lines.

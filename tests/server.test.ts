@@ -84,6 +84,37 @@ describe('Server REST API', () => {
       expect(response.status).toBe(200);
       expect(state.subjective).toEqual(eventData);
     });
+
+    it('should send a signal to the dynamic pill scheduler when took_psyllium_husk is true', async () => {
+      const eventData = {
+        timestamp: new Date().toISOString(),
+        woke_up_feeling_alright: false,
+        wakeups_during_night: 1,
+        pain: 'moderate',
+        vomit: false,
+        bowel: 'normal',
+        urine: 'normal',
+        feeling_duration: 'few_hours',
+        took_psyllium_husk: true
+      };
+
+      (global.fetch as any).mockClear();
+
+      const response = await request(app)
+        .post('/api/events/subjective')
+        .send(eventData);
+
+      expect(response.status).toBe(200);
+      expect(global.fetch).toHaveBeenCalled();
+      
+      const fetchCalls = (global.fetch as any).mock.calls;
+      const pillSchedulerCall = fetchCalls.find((call: any[]) => call[0].includes('/api/schedule/shift'));
+      expect(pillSchedulerCall).toBeDefined();
+      expect(JSON.parse(pillSchedulerCall[1].body)).toEqual({
+        shift_hours: 2,
+        reason: 'Psyllium Husk taken - delay pills to avoid absorption interference'
+      });
+    });
   });
 
   describe('POST /api/actions', () => {
