@@ -297,6 +297,10 @@ io.on('connection', (socket: Socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Human-Vector-Biome Hub running on port ${PORT}`);
-});
+export { app, server, io, state };
+
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => {
+    console.log(`Human-Vector-Biome Hub running on port ${PORT}`);
+  });
+}
