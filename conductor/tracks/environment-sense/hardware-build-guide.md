@@ -283,6 +283,150 @@ void loop() {
 
 ---
 
+## 3. Single-Node vs. Multi-Node (Wireless Split) Setup
+
+If your chair is mobile, running a physical wire from a desk-mounted ESP32 to the chair pressure sensors is highly impractical and a tripping hazard. 
+
+Because the Biome Hub's REST API is entirely decoupled, **you can use two separate ESP32 microcontrollers** communicating over WiFi independently:
+
+```
+[ ESP32 Node A: Desk/Env ]  ──(WiFi)──>  [ Biome Hub ]  <──(WiFi)──  [ ESP32 Node B: Chair ]
+  - SCD40 (Air Quality)                     (PC/Server)               - 4x FSRs (Pressure)
+  - HC-SR04 (Desk Height)                                             - Powered by USB power bank
+```
+
+### Node A: Desk & Environment (ESP32 #1)
+Wire the **SCD40** and **HC-SR04** to the first ESP32 exactly as shown in Phase 1. Flash the Phase 1 firmware. No other changes are needed.
+
+### Node B: Wireless Chair (ESP32 #2)
+This node mounts directly under your chair (e.g. taped under the seat cushion). You can power it using a small USB power bank or a phone charger cable plugged into a nearby wall outlet.
+
+#### Wiring for Node B (Chair Only):
+*   Connect one leg of each FSR to **ESP32 3.3V**.
+*   Connect the other leg of each FSR to the corresponding Analog pin:
+    *   **Left FSR** -> GPIO 32
+    *   **Right FSR** -> GPIO 33
+    *   **Front FSR** -> GPIO 34
+    *   **Back FSR** -> GPIO 35
+*   Connect each of those second legs to GND through a **10kΩ resistor** (voltage divider).
+
+#### Firmware for Node B (Chair Only):
+Install `WiFi.h`, `HTTPClient.h`, and `ArduinoJson` libraries on your second ESP32 development environment, and flash this lightweight sketch:
+
+```cpp
+// ============================================================
+// Environment Sense — Node B Firmware (Wireless Chair Node)
+// Only reads FSRs. Streams to Human-Vector-Biome Hub.
+// ============================================================
+
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+
+// --- Configuration (edit these) ---
+const char* WIFI_SSID     = "YOUR_WIFI_SSID";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* HUB_IP        = "http://192.168.1.XXX:3000"; // Your Node.js server LAN IP
+
+// --- Pin Definitions ---
+const int FSR_LEFT  = 32;
+const int FSR_RIGHT = 33;
+const int FSR_FRONT = 34;
+const int FSR_BACK  = 35;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println("\n[Boot] Wireless Chair Node starting...");
+
+  // WiFi
+  Serial.print("[WiFi] Connecting to ");
+  Serial.println(WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  int retries = 0;
+  while (WiFi.status() != WL_CONNECTED && retries < 30) {
+    delay(1000);
+    Serial.print(".");
+    retries++;
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n[WiFi] Connected! IP: " + WiFi.localIP().toString());
+  } else {
+    Serial.println("\n[WiFi] Running offline mode.");
+  }
+}
+
+void postTelemetry(const char* project, String& jsonPayload) {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  HTTPClient http;
+  String url = String(HUB_IP) + "/api/events/" + project;
+
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  http.setTimeout(3000);
+
+  int code = http.POST(jsonPayload);
+  Serial.print("[HTTP] POST /api/events/");
+  Serial.print(project);
+  Serial.print(" → ");
+  Serial.println(code > 0 ? String(code) : "ERROR " + String(code));
+
+  http.end();
+}
+
+void loop() {
+  int left  = analogRead(FSR_LEFT);
+  int right = analogRead(FSR_RIGHT);
+  int front = analogRead(FSR_FRONT);
+  int back  = analogRead(FSR_BACK);
+
+  // Map 12-bit ADC (0-4095) to 0-100% scale
+  int leftPct  = map(left,  0, 4095, 0, 100);
+  int rightPct = map(right, 0, 4095, 0, 100);
+  int frontPct = map(front, 0, 4095, 0, 100);
+  int backPct  = map(back,  0, 4095, 0, 100);
+
+  // Check if someone is actually sitting (sum of pressure > threshold)
+  // This prevents spamming the hub when the chair is empty
+  int totalPressure = leftPct + rightPct + frontPct + backPct;
+
+  if (totalPressure > 10) { // Sitting detected
+    StaticJsonDocument<128> chairDoc;
+    chairDoc["left_pressure"]  = leftPct;
+    chairDoc["right_pressure"] = rightPct;
+    chairDoc["front_pressure"] = frontPct;
+    chairDoc["back_pressure"]  = backPct;
+
+    String chairJson;
+    serializeJson(chairDoc, chairJson);
+    postTelemetry("chair", chairJson);
+
+    Serial.printf("[CHAIR] L:%d%% R:%d%% F:%d%% B:%d%%\n", leftPct, rightPct, frontPct, backPct);
+  } else {
+    // Optionally send an empty packet occasionally to confirm offline status
+    static unsigned long lastEmptySend = 0;
+    if (millis() - lastEmptySend > 20000) {
+      StaticJsonDocument<128> chairDoc;
+      chairDoc["left_pressure"]  = 0;
+      chairDoc["right_pressure"] = 0;
+      chairDoc["front_pressure"] = 0;
+      chairDoc["back_pressure"]  = 0;
+
+      String chairJson;
+      serializeJson(chairDoc, chairJson);
+      postTelemetry("chair", chairJson);
+      lastEmptySend = millis();
+      Serial.println("[CHAIR] Empty (0%)");
+    }
+  }
+
+  delay(2000); // Send chair state every 2 seconds
+}
+```
+
+---
+
 ### Calibrating the Desk Height Threshold
 
 The `STANDING_THRESHOLD_CM` value in the sketch is the **distance from the
