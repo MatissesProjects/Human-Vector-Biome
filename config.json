@@ -1,9 +1,0 @@
-{
-  "neckAngleThreshold": 22,
-  "lookingDownTimeLimitMs": 15000,
-  "postureScoreBadThreshold": 40,
-  "baseStressThreshold": 0.8,
-  "stressThresholdFloor": 0.4,
-  "co2AlertThreshold": 1000,
-  "weatherRefreshIntervalMs": 900000
-}
