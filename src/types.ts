@@ -138,9 +138,19 @@ export interface BiomeState {
   weather: WeatherTelemetry | null;
   baseline: DailyBaseline | null;
   subjective: SubjectiveLog | null;
+  git: GitMetrics | null;
 }
 
-export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions' | 'environment' | 'chair' | 'desk' | 'weather' | 'baseline' | 'subjective';
+export interface GitMetrics {
+  timestamp: string;
+  commits_today: number;
+  lines_added_today: number;
+  lines_deleted_today: number;
+  last_commit_message?: string;
+  last_commit_hash?: string;
+}
+
+export type ProjectType = 'posture' | 'heart' | 'muse' | 'story' | 'pills' | 'echo' | 'actions' | 'environment' | 'chair' | 'desk' | 'weather' | 'baseline' | 'subjective' | 'git';
 
 export interface ServerConfig {
   // Posture / Neck
@@ -172,4 +182,5 @@ export type TelemetryPayload =
   | { project: 'weather'; data: WeatherTelemetry }
   | { project: 'baseline'; data: DailyBaseline }
   | { project: 'subjective'; data: SubjectiveLog }
+  | { project: 'git'; data: GitMetrics }
   | { project: 'echo'; data: unknown };

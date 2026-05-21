@@ -6,6 +6,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import type { BiomeState, ProjectType, UserAction, TelemetryPayload, WeatherTelemetry, SubjectiveLog, Vector3, GitMetrics } from './types.js';
 import { ActionRecognizer } from './recognizer.js';
 import { config, registerSettingsRoutes } from './config.js';
@@ -265,6 +266,314 @@ function runInterventions() {
 
 // Settings endpoints
 registerSettingsRoutes(app, io);
+
+app.get('/api/history/wellness', (req: Request, res: Response) => {
+  let gitLogOutput = '';
+  try {
+    gitLogOutput = execSync('git log --date=short --pretty=format:"COMMIT:%ad|%h|%s" --numstat', {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore']
+    });
+  } catch (err) {
+    console.error('[History API] Failed to run git log:', err);
+  }
+
+  const subjectivePath = path.join(LOG_DIR, 'subjective.jsonl');
+  let subjectiveLogs: any[] = [];
+  if (fs.existsSync(subjectivePath)) {
+    try {
+      const lines = fs.readFileSync(subjectivePath, 'utf8').trim().split('\n');
+      subjectiveLogs = lines.filter(line => line.trim()).map(line => JSON.parse(line));
+    } catch (err) {
+      console.error('[History API] Failed to read/parse subjective logs:', err);
+    }
+  }
+
+  const actionsPath = path.join(LOG_DIR, 'actions.jsonl');
+  let actionLogs: any[] = [];
+  if (fs.existsSync(actionsPath)) {
+    try {
+      const lines = fs.readFileSync(actionsPath, 'utf8').trim().split('\n');
+      actionLogs = lines.filter(line => line.trim()).map(line => JSON.parse(line));
+    } catch (err) {
+      console.error('[History API] Failed to read/parse actions logs:', err);
+    }
+  }
+
+  interface DailyAggregate {
+    date: string;
+    commits: number;
+    linesAdded: number;
+    linesDeleted: number;
+    commitList: { hash: string; message: string }[];
+    hasWellness: boolean;
+    wellnessScore?: number;
+    wellnessCategory?: 'positive' | 'neutral' | 'negative' | 'none';
+    subjective?: any;
+    biometrics?: {
+      avgPostureScore: number | null;
+      avgStressIndex: number | null;
+      avgHRV: number | null;
+    };
+  }
+
+  const dailyMap: Record<string, DailyAggregate> = {};
+
+  function getOrCreateDay(dateStr: string): DailyAggregate {
+    if (!dailyMap[dateStr]) {
+      dailyMap[dateStr] = {
+        date: dateStr,
+        commits: 0,
+        linesAdded: 0,
+        linesDeleted: 0,
+        commitList: [],
+        hasWellness: false,
+        biometrics: {
+          avgPostureScore: null,
+          avgStressIndex: null,
+          avgHRV: null
+        }
+      };
+    }
+    return dailyMap[dateStr];
+  }
+
+  // Parse Git history
+  if (gitLogOutput) {
+    const lines = gitLogOutput.split('\n');
+    let currentGitDate: string | null = null;
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      if (trimmed.startsWith('COMMIT:')) {
+        const parts = trimmed.substring(7).split('|');
+        if (parts.length >= 3) {
+          const dateStr = parts[0];
+          const hash = parts[1];
+          const message = parts.slice(2).join('|');
+          currentGitDate = dateStr;
+          const day = getOrCreateDay(dateStr);
+          day.commits += 1;
+          day.commitList.push({ hash, message });
+        }
+      } else if (currentGitDate) {
+        const parts = trimmed.split(/\s+/);
+        if (parts.length >= 2) {
+          const added = parseInt(parts[0], 10);
+          const deleted = parseInt(parts[1], 10);
+          if (!isNaN(added) || !isNaN(deleted)) {
+            const day = getOrCreateDay(currentGitDate);
+            if (!isNaN(added)) day.linesAdded += added;
+            if (!isNaN(deleted)) day.linesDeleted += deleted;
+          }
+        }
+      }
+    }
+  }
+
+  // Parse Subjective Logs (keep latest per date)
+  const subjectiveByDate: Record<string, any> = {};
+  for (const entry of subjectiveLogs) {
+    if (entry.timestamp) {
+      const dateStr = entry.timestamp.split('T')[0];
+      subjectiveByDate[dateStr] = entry;
+    }
+  }
+
+  // Parse Actions Biometrics
+  interface BiometricAccumulator {
+    postureScores: number[];
+    stressIndices: number[];
+    hrvs: number[];
+  }
+  const biometricsByDate: Record<string, BiometricAccumulator> = {};
+  for (const entry of actionLogs) {
+    if (entry.timestamp) {
+      const dateStr = entry.timestamp.split('T')[0];
+      if (!biometricsByDate[dateStr]) {
+        biometricsByDate[dateStr] = { postureScores: [], stressIndices: [], hrvs: [] };
+      }
+      const accum = biometricsByDate[dateStr];
+      const snapshot = entry.stateSnapshot;
+      if (snapshot) {
+        if (snapshot.posture && snapshot.posture.analysis && typeof snapshot.posture.analysis.score === 'number') {
+          accum.postureScores.push(snapshot.posture.analysis.score);
+        }
+        if (snapshot.muse && typeof snapshot.muse.stress_index === 'number') {
+          accum.stressIndices.push(snapshot.muse.stress_index);
+        }
+        if (snapshot.heart && typeof snapshot.heart.hrv === 'number') {
+          accum.hrvs.push(snapshot.heart.hrv);
+        }
+      }
+    }
+  }
+
+  // Combine and Score
+  const allHealthDates = new Set([...Object.keys(subjectiveByDate), ...Object.keys(biometricsByDate)]);
+  for (const dateStr of allHealthDates) {
+    const day = getOrCreateDay(dateStr);
+    day.hasWellness = true;
+
+    if (subjectiveByDate[dateStr]) {
+      day.subjective = subjectiveByDate[dateStr];
+    }
+
+    const accum = biometricsByDate[dateStr];
+    if (accum) {
+      if (accum.postureScores.length > 0) {
+        const sum = accum.postureScores.reduce((a, b) => a + b, 0);
+        day.biometrics!.avgPostureScore = Math.round(sum / accum.postureScores.length);
+      }
+      if (accum.stressIndices.length > 0) {
+        const sum = accum.stressIndices.reduce((a, b) => a + b, 0);
+        day.biometrics!.avgStressIndex = parseFloat((sum / accum.stressIndices.length).toFixed(3));
+      }
+      if (accum.hrvs.length > 0) {
+        const sum = accum.hrvs.reduce((a, b) => a + b, 0);
+        day.biometrics!.avgHRV = Math.round(sum / accum.hrvs.length);
+      }
+    }
+
+    // Calculate wellness score
+    let score = 50;
+
+    if (day.subjective) {
+      const sub = day.subjective;
+      if (sub.woke_up_feeling_alright === true) score += 10;
+      if (sub.woke_up_feeling_alright === false) score -= 10;
+
+      if (sub.pain === 'none') score += 10;
+      else if (sub.pain === 'mild') score += 0;
+      else if (sub.pain === 'moderate') score -= 10;
+      else if (sub.pain === 'severe') score -= 20;
+
+      if (sub.vomit === true) score -= 15;
+
+      if (sub.bowel === 'normal') score += 5;
+      else if (['constipated', 'diarrhea'].includes(sub.bowel)) score -= 5;
+
+      if (sub.urine === 'normal') score += 5;
+      else if (['dark', 'frequent', 'burning'].includes(sub.urine)) score -= 5;
+    }
+
+    if (day.biometrics) {
+      const bio = day.biometrics;
+      if (bio.avgPostureScore !== null) {
+        if (bio.avgPostureScore > 75) score += 10;
+        else if (bio.avgPostureScore < 55) score -= 10;
+      }
+      if (bio.avgStressIndex !== null) {
+        if (bio.avgStressIndex < 0.4) score += 10;
+        else if (bio.avgStressIndex > 0.75) score -= 10;
+      }
+      if (bio.avgHRV !== null) {
+        if (bio.avgHRV > 65) score += 5;
+        else if (bio.avgHRV < 45) score -= 5;
+      }
+    }
+
+    score = Math.max(0, Math.min(100, score));
+    day.wellnessScore = score;
+
+    if (score >= 65) {
+      day.wellnessCategory = 'positive';
+    } else if (score >= 40) {
+      day.wellnessCategory = 'neutral';
+    } else {
+      day.wellnessCategory = 'negative';
+    }
+  }
+
+  // Generate simulated/demo data
+  const simulatedMap: Record<string, any> = {};
+  const today = new Date();
+  for (let i = 0; i < 90; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+
+    const actualGit = dailyMap[dateStr];
+    const commits = actualGit ? actualGit.commits : 0;
+    const linesAdded = actualGit ? actualGit.linesAdded : 0;
+    const linesDeleted = actualGit ? actualGit.linesDeleted : 0;
+    const commitList = actualGit ? actualGit.commitList : [];
+
+    // Deterministic random simulated wellness
+    let charSum = 0;
+    for (let charIndex = 0; charIndex < dateStr.length; charIndex++) {
+      charSum += dateStr.charCodeAt(charIndex);
+    }
+    const rand = (charSum % 100) / 100;
+
+    let wellnessCategory: 'positive' | 'neutral' | 'negative' = 'positive';
+    let wellnessScore = 80;
+    let pain: 'none' | 'mild' | 'moderate' | 'severe' = 'none';
+    let woke_up_feeling_alright = true;
+    let avgPostureScore = 85;
+    let avgStressIndex = 0.32;
+    let avgHRV = 68;
+
+    if (rand < 0.15) {
+      wellnessCategory = 'negative';
+      wellnessScore = Math.floor(rand * 100) % 25 + 15;
+      pain = (charSum % 2 === 0) ? 'severe' : 'moderate';
+      woke_up_feeling_alright = false;
+      avgPostureScore = (charSum % 20) + 35;
+      avgStressIndex = parseFloat((0.7 + (charSum % 20) / 100).toFixed(2));
+      avgHRV = (charSum % 15) + 30;
+    } else if (rand < 0.4) {
+      wellnessCategory = 'neutral';
+      wellnessScore = Math.floor(rand * 100) % 25 + 40;
+      pain = (charSum % 3 === 0) ? 'moderate' : 'mild';
+      woke_up_feeling_alright = charSum % 2 === 0;
+      avgPostureScore = (charSum % 20) + 55;
+      avgStressIndex = parseFloat((0.45 + (charSum % 25) / 100).toFixed(2));
+      avgHRV = (charSum % 20) + 45;
+    } else {
+      wellnessCategory = 'positive';
+      wellnessScore = Math.floor(rand * 100) % 35 + 65;
+      pain = (charSum % 10 === 0) ? 'mild' : 'none';
+      woke_up_feeling_alright = true;
+      avgPostureScore = (charSum % 15) + 75;
+      avgStressIndex = parseFloat((0.2 + (charSum % 20) / 100).toFixed(2));
+      avgHRV = (charSum % 20) + 65;
+    }
+
+    simulatedMap[dateStr] = {
+      date: dateStr,
+      commits,
+      linesAdded,
+      linesDeleted,
+      commitList,
+      hasWellness: true,
+      wellnessScore,
+      wellnessCategory,
+      subjective: {
+        timestamp: new Date(new Date(d).setHours(8, 0, 0, 0)).toISOString(),
+        woke_up_feeling_alright,
+        wakeups_during_night: wellnessCategory === 'negative' ? 3 : (wellnessCategory === 'neutral' ? 1 : 0),
+        pain,
+        vomit: wellnessCategory === 'negative' && (charSum % 5 === 0),
+        bowel: wellnessCategory === 'negative' ? 'constipated' : 'normal',
+        urine: 'normal',
+        took_psyllium_husk: wellnessCategory === 'positive' && (charSum % 4 === 0),
+        notes: wellnessCategory === 'negative' ? 'Felt quite fatigued today.' : (wellnessCategory === 'positive' ? 'Great coding flow and posture.' : 'Normal day.')
+      },
+      biometrics: {
+        avgPostureScore,
+        avgStressIndex,
+        avgHRV
+      }
+    };
+  }
+
+  res.status(200).json({
+    actual: dailyMap,
+    simulated: simulatedMap
+  });
+});
 
 // REST Endpoints for low-frequency data
 app.post('/api/events/:project', (req: Request, res: Response) => {
