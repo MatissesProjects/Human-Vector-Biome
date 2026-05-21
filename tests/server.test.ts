@@ -536,4 +536,32 @@ describe('Server REST API', () => {
       expect(state.posture).toBeDefined();
     });
   });
+
+  // -------------------------------------------------------------------------
+  describe('Wellness History API', () => {
+    it('GET /api/history/wellness should return actual and simulated history data', async () => {
+      const response = await request(app)
+        .get('/api/history/wellness');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('actual');
+      expect(response.body).toHaveProperty('simulated');
+      expect(typeof response.body.actual).toBe('object');
+      expect(typeof response.body.simulated).toBe('object');
+
+      const simulatedKeys = Object.keys(response.body.simulated);
+      expect(simulatedKeys.length).toBeGreaterThan(0);
+      
+      const firstSimulatedDay = response.body.simulated[simulatedKeys[0]];
+      expect(firstSimulatedDay).toHaveProperty('date');
+      expect(firstSimulatedDay).toHaveProperty('commits');
+      expect(firstSimulatedDay).toHaveProperty('linesAdded');
+      expect(firstSimulatedDay).toHaveProperty('linesDeleted');
+      expect(firstSimulatedDay).toHaveProperty('hasWellness', true);
+      expect(firstSimulatedDay).toHaveProperty('wellnessScore');
+      expect(firstSimulatedDay).toHaveProperty('wellnessCategory');
+      expect(firstSimulatedDay).toHaveProperty('subjective');
+      expect(firstSimulatedDay).toHaveProperty('biometrics');
+    });
+  });
 });
