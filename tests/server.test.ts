@@ -74,6 +74,7 @@ describe('Server REST API', () => {
     state.environment = null;
     state.subjective = null;
     state.baseline = null;
+    state.git = null;
   });
 
   // -------------------------------------------------------------------------
@@ -96,6 +97,23 @@ describe('Server REST API', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.status).toBe('error');
+    });
+
+    it('should update state and return success for git events', async () => {
+      const eventData = {
+        timestamp: new Date().toISOString(),
+        commits_today: 5,
+        lines_added_today: 150,
+        lines_deleted_today: 30,
+        last_commit_message: 'feat: add git poller',
+        last_commit_hash: 'a1b2c3d'
+      };
+      const response = await request(app)
+        .post('/api/events/git')
+        .send(eventData);
+
+      expect(response.status).toBe(200);
+      expect(state.git).toEqual(eventData);
     });
 
     it('should update state and return success for pills events', async () => {
