@@ -7,8 +7,8 @@
  * and POSTs them to the Human-Vector-Biome Hub.
  */
 
-const { execSync } = require('child_process');
-const http = require('http');
+import { execSync } from 'child_process';
+import http from 'http';
 
 // Configuration
 const HUB_URL = process.env.BIOME_HUB_URL || 'http://localhost:3000';
