@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useBiome } from "@/context/BiomeContext";
-import { Activity, Brain, User, BookOpen, AlertCircle, AlertTriangle, Tag, Dumbbell, Cloud, Moon, Smile, Frown, Settings } from "lucide-react";
+import { Activity, Brain, User, BookOpen, AlertCircle, AlertTriangle, Tag, Dumbbell, Cloud, Moon, Smile, Frown, Settings, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SkeletonView from "@/components/SkeletonView";
 import ActionCapture from "@/components/ActionCapture";
@@ -11,9 +11,10 @@ import PulseOrb from "@/components/PulseOrb";
 import NextBestAction from "@/components/NextBestAction";
 import SubjectiveLogForm from "@/components/SubjectiveLogForm";
 import SettingsPanel from "@/components/SettingsPanel";
+import WellnessHeatmap from "@/components/WellnessHeatmap";
 import { useIsStale } from "@/hooks/useIsStale";
 
-type Tab = 'vitals' | 'training' | 'narrative' | 'settings';
+type Tab = 'vitals' | 'training' | 'narrative' | 'history' | 'settings';
 
 export default function Home() {
   const state = useBiome();
@@ -62,6 +63,13 @@ export default function Home() {
         >
           <BookOpen size={16} className={activeTab === 'narrative' ? 'text-emerald-400' : ''} />
           Narrative Sync
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'history' ? 'bg-zinc-800/80 text-white border-t border-x border-zinc-700/50' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50'}`}
+        >
+          <Calendar size={16} className={activeTab === 'history' ? 'text-indigo-400' : ''} />
+          Wellness History
         </button>
         <button
           onClick={() => setActiveTab('settings')}
@@ -494,6 +502,18 @@ export default function Home() {
                   </div>
                 )}
               </section>
+            </motion.div>
+          )}
+          {activeTab === 'history' && (
+            <motion.div
+              key="history"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="w-full"
+            >
+              <WellnessHeatmap />
             </motion.div>
           )}
           {activeTab === 'settings' && (
