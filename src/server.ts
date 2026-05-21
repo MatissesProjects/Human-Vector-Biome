@@ -6,7 +6,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import type { BiomeState, ProjectType, UserAction, TelemetryPayload, WeatherTelemetry, SubjectiveLog, Vector3 } from './types.js';
+import type { BiomeState, ProjectType, UserAction, TelemetryPayload, WeatherTelemetry, SubjectiveLog, Vector3, GitMetrics } from './types.js';
 import { ActionRecognizer } from './recognizer.js';
 import { config, registerSettingsRoutes } from './config.js';
 
@@ -47,7 +47,8 @@ const state: BiomeState = {
   desk: null,
   weather: null,
   baseline: null,
-  subjective: null
+  subjective: null,
+  git: null
 };
 
 let activeCapture: { id: string, label: string, streams: string[] } | null = null;
@@ -169,6 +170,16 @@ function persistSubjectiveLog(log: SubjectiveLog) {
   }
 }
 
+function persistGitLog(log: GitMetrics) {
+  const filePath = path.join(LOG_DIR, 'git.jsonl');
+  try {
+    fs.appendFileSync(filePath, JSON.stringify(log) + '\n');
+    console.log(`[Persistence] Logged Git metrics at: ${log.timestamp}`);
+  } catch (err) {
+    console.error(`[Persistence] Failed to log Git metrics to ${filePath}:`, err);
+  }
+}
+
 function persistTelemetrySample(actionId: string, label: string, project: string, data: unknown) {
   const filePath = path.join(LOG_DIR, 'capture_samples.jsonl');
   const entry = {
@@ -276,6 +287,10 @@ app.post('/api/events/:project', (req: Request, res: Response) => {
   if (project === 'baseline') state.baseline = eventData;
   if (project === 'muse') state.muse = eventData;
   if (project === 'heart') state.heart = eventData;
+  if (project === 'git') {
+    state.git = eventData;
+    persistGitLog(eventData);
+  }
   if (project === 'subjective') {
     state.subjective = eventData;
     persistSubjectiveLog(eventData);
@@ -429,6 +444,10 @@ io.on('connection', (socket: Socket) => {
     if (project === 'chair') state.chair = data;
     if (project === 'desk') state.desk = data;
     if (project === 'baseline') state.baseline = data;
+    if (project === 'git') {
+        state.git = data as GitMetrics;
+        persistGitLog(data as GitMetrics);
+    }
     if (project === 'subjective') {
         state.subjective = data;
         persistSubjectiveLog(data);
